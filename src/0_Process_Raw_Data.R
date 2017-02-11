@@ -62,6 +62,7 @@ readData =
 ### Training Data
 offline <- readData(filename = unzip("./data/raw/offline.final.trace.zip"))
 
+# Saving as a R binary file has faster i/o then csv and smaller size.
 saveRDS(offline, file="./data/processed/offline.rds") 
 
 ### Test Data
