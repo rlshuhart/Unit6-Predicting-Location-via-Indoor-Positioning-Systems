@@ -1,7 +1,10 @@
 
 options(digits = 2)
 
-txt = readLines("Data/offline.final.trace.txt")
+# Added zip file reference
+offlineData <- unzip("./data/raw/offline.final.trace.zip")
+
+txt = readLines(offlineData)
 
 sum(substr(txt, 1, 1) == "#")
 
@@ -169,7 +172,7 @@ par(oldPar)
 dev.off()
 
 readData = 
-  function(filename = 'Data/offline.final.trace.txt', 
+  function(filename = offlineData, 
            subMacs = c("00:0f:a3:39:e1:c0", "00:0f:a3:39:dd:cd", "00:14:bf:b1:97:8a",
                        "00:14:bf:3b:c7:c6", "00:14:bf:b1:97:90", "00:14:bf:b1:97:8d",
                        "00:14:bf:b1:97:81"))
