@@ -5,6 +5,7 @@ output: html_notebook
 
 
 ```{r}
-# Future Code
+# Training Data
+train <- load("../data/processed/offline.rdf")
 ```
 
