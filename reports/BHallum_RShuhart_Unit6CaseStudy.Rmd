@@ -5,7 +5,8 @@ output: html_notebook
 
 
 ```{r}
-# Training Data
-train <- load("../data/processed/offline.rdf")
+# Data
+train <- readRDS("../data/processed/offline.rds")
+test <- readRDS("../data/processed/online.rds")
 ```
 
