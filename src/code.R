@@ -357,7 +357,7 @@ par(oldPar)
 dev.off()
 
 macs = unique(offlineSummary$mac)
-online = readData("Data/online.final.trace.txt", subMacs = macs)
+online = readData("Data/raw/online.final.trace.txt", subMacs = macs)
 
 online$posXY = paste(online$posX, online$posY, sep = "-")
 
