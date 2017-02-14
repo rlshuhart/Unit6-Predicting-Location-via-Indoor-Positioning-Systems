@@ -60,8 +60,9 @@ readData =
   }
 
 
-
-### Training Data
+#######################################################
+#################### Offline Data #####################
+#######################################################
 offline <- readData(filename = unzip("./data/raw/offline.final.trace.zip"))
 
 offline$posXY = paste(offline$posX, offline$posY, sep = "-")
@@ -103,7 +104,9 @@ macs = unique(offlineSummary$mac)
 saveRDS(offline, file="./data/processed/offline.rds") 
 saveRDS(offlineSummary, file="./data/processed/offlinesummary.rds") 
 
-##### Online Data #####
+#######################################################
+##################### Online Data #####################
+#######################################################
 online <- readData(filename = "./data/raw/online.final.trace.txt", subMacs=macs)
 
 online$posXY = paste(online$posX, online$posY, sep = "-")
