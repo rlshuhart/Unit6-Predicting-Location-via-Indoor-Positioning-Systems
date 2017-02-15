@@ -1,12 +1,22 @@
 ---
 title: "Predicting Location via Indoor Positioning Systems"
+subtitle: MSDS 7333-401
+author: "Brett Hallum, Chris Ficklin, and Ryan Shuhart"
+date: February 2016
 output: html_notebook
+#output: pdf_document <- to be used for submission
 ---
+```{r, include=FALSE}
+# Libraries
+library(dplyr)
+library(ggplot2)
+```
 
 
 ```{r}
 # Data
 train <- readRDS("../data/processed/offline.rds")
+trainSum <- readRDS("../data/processed/offlinesummary.rds")
 test <- readRDS("../data/processed/online.rds")
 ```
 
