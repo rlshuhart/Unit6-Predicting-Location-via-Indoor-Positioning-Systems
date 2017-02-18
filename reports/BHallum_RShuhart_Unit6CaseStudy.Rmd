@@ -6,6 +6,20 @@ date: February 2016
 output: html_notebook
 #output: pdf_document <- to be used for submission
 ---
+# Abstract
+blah blah blah...
+
+# Introduction
+blah blah blah...
+
+# Description of Data
+blah blah
+
+# Brief Exploration of the Data
+I like to paint by color...
+
+
+
 ```{r, include=FALSE}
 # Libraries
 library(dplyr)
@@ -163,4 +177,6 @@ estXYk5 = predXY(newSignals = testSum[ , 6:11],
 
 calcError(estXYk5, actualXY)
 ```
+
+
 
