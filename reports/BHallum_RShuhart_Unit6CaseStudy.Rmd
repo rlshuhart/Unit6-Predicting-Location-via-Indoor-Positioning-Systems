@@ -26,7 +26,6 @@ library(dplyr)
 library(ggplot2)
 ```
 
-
 ```{r}
 # Data
 train <- readRDS("../data/processed/offline.rds")
@@ -93,6 +92,28 @@ findNN = function(newSignal, trainSubset) {
   return(trainSubset[closest, 1:3 ])
 }
 
+#Finds the weighted nearest neighbor
+findWeightedNN = function(newSignal, trainSubset) {
+  diffs = apply(trainSubset[ , 4:9], 1, 
+                function(x) x - newSignal)
+  dists = apply(diffs, 2, function(x) sqrt(sum(x^2)) )
+  
+  inverse_diffs_sum = 0
+  
+  for (dist in dists){
+    inverse_diffs_sum = inverse_diffs_sum + 1/dist
+  }
+  
+  for(dist in dists){
+    dist = (1/dist)/inverse_diffs_sum * dist
+  }
+  
+  dists
+  
+  closest = order(dists)
+  return(trainSubset[closest, 1:3 ])
+}
+
 #predicts the x and y location of the emitter
 predXY = function(newSignals, newAngles, trainData, 
                   numAngles = 1, k = 3){
@@ -103,6 +124,25 @@ predXY = function(newSignals, newAngles, trainData,
     trainSS = selectTrain(newAngles[i], trainData, m = numAngles)
     closeXY[[i]] = 
       findNN(newSignal = as.numeric(newSignals[i, ]), trainSS)
+  }
+
+  estXY = lapply(closeXY, 
+                 function(x) sapply(x[ , 2:3], 
+                                    function(x) mean(x[1:k])))
+  estXY = do.call("rbind", estXY)
+  return(estXY)
+}
+
+#predicts the x and y location of the emitter for weighted Nearest Neighbor
+predWeightedXY = function(newSignals, newAngles, trainData, 
+                  numAngles = 1, k = 3){
+  
+  closeXY = list(length = nrow(newSignals))
+  
+  for (i in 1:nrow(newSignals)) {
+    trainSS = selectTrain(newAngles[i], trainData, m = numAngles)
+    closeXY[[i]] = 
+      findWeightedNN(newSignal = as.numeric(newSignals[i, ]), trainSS)
   }
 
   estXY = lapply(closeXY, 
@@ -176,6 +216,20 @@ estXYk5 = predXY(newSignals = testSum[ , 6:11],
                  trainSum, numAngles = 3, k = 5)
 
 calcError(estXYk5, actualXY)
+```
+```{r}
+estXYk5 = predWeightedXY(newSignals = testSum[ , 6:11], 
+                 newAngles = testSum[ , 4], 
+                 trainSum, numAngles = 3, k = 5)
+
+calcError(estXYk5, actualXY)
+```
+```{r}
+trainSS = selectTrain(45, trainSum, m = 3)
+
+weightedNN = findWeightedNN(testSum[ , 6:11], trainSS)
+
+weightedNN
 ```
 
 
