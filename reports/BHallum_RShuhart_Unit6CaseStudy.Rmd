@@ -6,6 +6,20 @@ date: February 2016
 output: html_notebook
 #output: pdf_document <- to be used for submission
 ---
+# Abstract
+blah blah blah...
+
+# Introduction
+blah blah blah...
+
+# Description of Data
+blah blah
+
+# Brief Exploration of the Data
+I like to paint by color...
+
+
+
 ```{r, include=FALSE}
 # Libraries
 library(dplyr)
@@ -14,9 +28,11 @@ library(ggplot2)
 
 
 ```{r}
-# Data
-train <- readRDS("../data/processed/offline.rds")
-trainSum <- readRDS("../data/processed/offlinesummary.rds")
-test <- readRDS("../data/processed/online.rds")
+# Processed Data
+offline <- readRDS("../data/processed/offline.rds")
+offlineSum <- readRDS("../data/processed/offlinesummary.rds")
+online <- readRDS("../data/processed/online.rds")
 ```
+
+
 
