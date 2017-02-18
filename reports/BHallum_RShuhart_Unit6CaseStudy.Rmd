@@ -35,6 +35,12 @@ testSum <- readRDS("../data/processed/onlinesummary.rds")
 ```
 
 ```{r}
+roundOrientation = function(angles) {
+  refs = seq(0, by = 45, length  = 9)
+  q = sapply(angles, function(o) which.min(abs(o - refs)))
+  c(refs[1:8], 0)[q]
+}
+
 #Reshapes data into form simlar to testSum
 reshapeSS = function(data, varSignal = "signal", 
                      keepVars = c("posXY", "posX","posY"),
