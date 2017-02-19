@@ -128,3 +128,15 @@ onlineSummary = do.call("rbind", byLoc)
 saveRDS(online, file="./data/processed/online.rds")
 saveRDS(onlineSummary, file="./data/processed/onlinesummary.rds")
 
+
+#######################################################
+################ Online Data - All MACs ###############
+#######################################################
+allmacs <- names(sort(table(offline$mac), decreasing = TRUE))
+
+online_allmacs <- readData(filename = "./data/raw/online.final.trace.txt", subMacs=allmacs)
+
+online_allmacs$posXY = paste(online$posX, online$posY, sep = "-")
+
+# Save data
+saveRDS(online_allmacs, file="./data/processed/online_allmacs.rds")

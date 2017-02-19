@@ -1,0 +1,234 @@
+---
+title: "Modern R Notebook"
+output: html_notebook
+---
+
+
+
+```{r, include=FALSE}
+# Libraries
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(DataExplorer)
+library(class) #KNN
+library(FNN) #KNN Regression
+```
+
+## Import Pre-processed Data
+```{r}
+# Processed Data
+offline <- readRDS("../data/processed/offline.rds")
+online <- readRDS("../data/processed/online.rds")
+online_allmacs <- readRDS("../data/processed/online_allmacs.rds")
+
+
+# Signal Lists
+
+# All accesspoints
+allsigs <- c(
+  "sig_cd", # Access Point #?
+  "sig_c0", # Access Point #?
+  "sig_c6", # Access Point #?
+  "sig_81", # Access Point #?
+  "sig_8a", # Access Point #?
+  "sig_8d", # Access Point #?
+  "sig_90"  # Access Point #?
+             )
+
+# drop e1:c0
+keep_ddcd_sigs <- c(
+  "sig_cd", # Access Point #?
+  "sig_c6", # Access Point #?
+  "sig_81", # Access Point #?
+  "sig_8a", # Access Point #?
+  "sig_8d", # Access Point #?
+  "sig_90"  # Access Point #?
+             )
+
+# drop dd:cd
+keep_e1c0_sigs <- c(
+  "sig_c0", # Access Point #?
+  "sig_c6", # Access Point #?
+  "sig_81", # Access Point #?
+  "sig_8a", # Access Point #?
+  "sig_8d", # Access Point #?
+  "sig_90"  # Access Point #?
+             )
+```
+
+
+## Create Data Set by Time
+```{r}
+trainByTime <- group_by(offline, time, posXY, mac,  angle) %>%
+  summarize(avgSig = mean(signal)) %>%
+  spread(mac, avgSig) %>%
+  ungroup()%>%
+  rename(sig_cd = `00:0f:a3:39:dd:cd`,
+         sig_c0 = `00:0f:a3:39:e1:c0`, 
+         sig_c6 = `00:14:bf:3b:c7:c6`,
+         sig_81 = `00:14:bf:b1:97:81`,
+         sig_8a = `00:14:bf:b1:97:8a`,
+         sig_8d = `00:14:bf:b1:97:8d`,
+         sig_90 = `00:14:bf:b1:97:90`)
+
+head(trainByTime)
+```
+
+## Exploratoration of Offline Data
+### Missing Data
+```{r}
+trainByTime[,allsigs] %>% summarize_each(funs(sum(is.na(.))))
+```
+```{r}
+PlotMissing(trainByTime)
+```
+
+### Histogram of Signal Strengths
+```{r}
+HistogramContinuous(trainByTime[,allsigs])
+```
+
+### Correlation of Signal Stregths
+```{r}
+CorrelationContinuous(trainByTime[,allsigs], use = "na.or.complete")
+```
+
+## Create Train Data Set by Average Signal
+```{r}
+trainByAvgSig <- group_by(offline, posXY, posX, posY, mac,  angle) %>%
+  summarize(avgSig = mean(signal)) %>%
+  spread(mac, avgSig) %>%
+  ungroup()%>%
+  rename(sig_cd = `00:0f:a3:39:dd:cd`,
+         sig_c0 = `00:0f:a3:39:e1:c0`, 
+         sig_c6 = `00:14:bf:3b:c7:c6`,
+         sig_81 = `00:14:bf:b1:97:81`,
+         sig_8a = `00:14:bf:b1:97:8a`,
+         sig_8d = `00:14:bf:b1:97:8d`,
+         sig_90 = `00:14:bf:b1:97:90`)
+
+head(trainByAvgSig)
+
+```
+### Check if Missing Data on from Average Aggregation
+```{r}
+trainByAvgSig[,allsigs] %>% summarize_each(funs(sum(is.na(.))))
+```
+
+```{r}
+testAllMacs <- group_by(online_allmacs, posXY, posX, posY, mac,  angle) %>%
+  summarize(avgSig = mean(signal)) %>%
+  spread(mac, avgSig)%>%
+  ungroup()%>%
+  rename(sig_cd = `00:0f:a3:39:dd:cd`,
+         sig_c0 = `00:0f:a3:39:e1:c0`, 
+         sig_c6 = `00:14:bf:3b:c7:c6`,
+         sig_81 = `00:14:bf:b1:97:81`,
+         sig_8a = `00:14:bf:b1:97:8a`,
+         sig_8d = `00:14:bf:b1:97:8d`,
+         sig_90 = `00:14:bf:b1:97:90`) 
+
+#names(trainByAvgSig)
+names(trainByAvgSig)
+names(testAllMacs)
+```
+
+
+## KNN Classification on all Macs
+```{r}
+train_Y <- factor(trainByAvgSig$posXY)
+train_X <- select(trainByAvgSig, -posXY, -posX, -posY)
+test_X <- select(testAllMacs, -posXY, -posX, -posY)
+
+#k = 1
+test_estk1 <- as.character(knn(train_X, test_X, train_Y, k=1))
+
+#k = 3
+test_estk3 <- as.character(knn(train_X, test_X, train_Y, k=3))
+
+#k = 5
+test_estk5 <- as.character(knn(train_X, test_X, train_Y, k=5))
+
+```
+
+```{r}
+errCalc <- function(EstimateXY, TruthX_Y){
+  tmp <- cbind(Est_posXY = EstimateXY, TruthX_Y) %>%
+          separate(Est_posXY, c("Est_posX", "Est_posY"), sep="-") %>%
+          select(Est_posX, Est_posY, posX, posY) %>%
+          mutate(Est_posX = as.numeric(Est_posX),
+                 Est_posY = as.numeric(Est_posY))
+  #print(tmp)
+  sum( rowSums( (tmp[,c("Est_posX", "Est_posY")] - tmp[,c("posX", "posY")])^2) )
+}
+
+errCalc(test_estk1, testAllMacs[,c("posX","posY")])
+errCalc(test_estk3, testAllMacs[,c("posX","posY")])
+errCalc(test_estk5, testAllMacs[,c("posX","posY")])
+
+```
+
+## Ussing KNN Regression
+```{r}
+trainPosX_Y <- trainByAvgSig$posX
+trainPosX_X <- select(trainByAvgSig, -posXY, -posX, -posY)
+testPosX_X <- select(testAllMacs, -posXY, -posX, -posY)
+
+trainPosY_Y <- trainByAvgSig$posY
+trainPosY_X <- select(trainByAvgSig, -posXY, -posX, -posY)
+testPosY_X <- select(testAllMacs, -posXY, -posX, -posY)
+
+#k = 1
+test_estXk1 <- knn.reg(trainPosX_X, testPosX_X, trainPosX_Y, k=1)$pred
+test_estYk1 <- knn.reg(trainPosY_X, testPosY_X, trainPosY_Y, k=1)$pred
+test_estXYk1 <- data.frame(posX = test_estXk1, posY = test_estYk1)
+
+#k = 3
+test_estXk3 <- knn.reg(trainPosX_X, testPosX_X, trainPosX_Y, k=3)$pred
+test_estYk3 <- knn.reg(trainPosY_X, testPosY_X, trainPosY_Y, k=3)$pred
+test_estXYk3 <- data.frame(posX = test_estXk3, posY = test_estYk3)
+
+#k = 5
+test_estXk5 <- knn.reg(trainPosX_X, testPosX_X, trainPosX_Y, k=5)$pred
+test_estYk5 <- knn.reg(trainPosY_X, testPosY_X, trainPosY_Y, k=5)$pred
+test_estXYk5 <- data.frame(posX = test_estXk5, posY = test_estYk5)
+```
+
+
+```{r}
+#sum( rowSums( (estXY - actualXY)^2) )
+sum( rowSums( (test_estXYk1 - testAllMacs[,c("posX", "posY")])^2) )
+sum( rowSums( (test_estXYk3 - testAllMacs[,c("posX", "posY")])^2) )
+sum( rowSums( (test_estXYk5 - testAllMacs[,c("posX", "posY")])^2) )
+```
+
+training set by time - done
+
+
+Training set averaged signal - done
+
+
+Training set weighted average signal
+
+keep only 00:0f:a3:39:e1:c0
+
+keep only 00:0f:a3:39:dd:cd
+
+inlcude both
+
+Which of these two MAC addresses should be used and which should not be used for RTLS? 
+
+Which MAC address yields the best prediction of location?
+
+Does using data for both MAC addresses simultaneously yield more, or less, accurate prediction of location?
+
+For what range of values of weights are you able to obtain better prediction values than for the unweighted k-nearest neighbor approach? 
+
+## Weighted
+$\frac{1/d}{\sum_{i=1}^k 1/d_i}$ 
+```{r}
+# W
+
+
+```

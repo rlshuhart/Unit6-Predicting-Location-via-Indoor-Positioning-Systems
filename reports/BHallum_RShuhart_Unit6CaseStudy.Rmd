@@ -43,6 +43,12 @@ unique(trainSum$mac)
 
 
 ```{r}
+roundOrientation = function(angles) {
+  refs = seq(0, by = 45, length  = 9)
+  q = sapply(angles, function(o) which.min(abs(o - refs)))
+  c(refs[1:8], 0)[q]
+}
+
 #Reshapes data into form simlar to testSum
 reshapeSS = function(data, varSignal = "signal", 
                      keepVars = c("posXY", "posX","posY"),
@@ -162,14 +168,23 @@ predWeightedXY = function(newSignals, newAngles, trainData,
 ```
 
 ```{r}
+sigs_to_use = c(
+                "00:0f:a3:39:e1:c0",
+                "00:14:bf:3b:c7:c6",
+                "00:14:bf:b1:97:81",
+                "00:14:bf:b1:97:8a",
+                "00:14:bf:b1:97:8d",
+                "00:14:bf:b1:97:90"
+                )
+
 #X and Y estimates for 3 NN
-estXYk3 = predXY(newSignals = testSum[ , 6:11], 
-                 newAngles = testSum[ , 4], 
+estXYk3 = predXY(newSignals = testSum[ , sigs_to_use], 
+                 newAngles = testSum$orientation, 
                  trainSum, numAngles = 3, k = 3)
 
 #X and Y estimates for 1 NN
-estXYk1 = predXY(newSignals = testSum[ , 6:11], 
-                 newAngles = testSum[ , 4], 
+estXYk1 = predXY(newSignals = testSum[ , sigs_to_use], 
+                 newAngles = testSum$orientation, 
                  trainSum, numAngles = 3, k = 1)
 
 ```
