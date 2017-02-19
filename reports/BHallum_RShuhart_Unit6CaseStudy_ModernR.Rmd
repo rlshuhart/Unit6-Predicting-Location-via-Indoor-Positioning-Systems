@@ -193,15 +193,47 @@ test_estXYk3 <- data.frame(posX = test_estXk3, posY = test_estYk3)
 test_estXk5 <- knn.reg(trainPosX_X, testPosX_X, trainPosX_Y, k=5)$pred
 test_estYk5 <- knn.reg(trainPosY_X, testPosY_X, trainPosY_Y, k=5)$pred
 test_estXYk5 <- data.frame(posX = test_estXk5, posY = test_estYk5)
-```
 
-
-```{r}
+# MSE
 #sum( rowSums( (estXY - actualXY)^2) )
 sum( rowSums( (test_estXYk1 - testAllMacs[,c("posX", "posY")])^2) )
 sum( rowSums( (test_estXYk3 - testAllMacs[,c("posX", "posY")])^2) )
 sum( rowSums( (test_estXYk5 - testAllMacs[,c("posX", "posY")])^2) )
 ```
+
+```{r}
+validatation <- testAllMacs[,c("posX", "posY")]
+
+k_compare_func <- function(trainPosX_X, 
+                           trainPosY_X, 
+                           testPosX_X, 
+                           testPosY_X,
+                           validatation,
+                           i){
+  estX <- knn.reg(trainPosX_X, testPosX_X, trainPosX_Y, k=i)$pred
+  estY <- knn.reg(trainPosY_X, testPosY_X, trainPosY_Y, k=i)$pred
+  
+  estXYk <- data.frame(posX = estX, posY = estY)
+  
+  sum( rowSums( (estXYk - validatation)^2) )
+  
+}
+
+
+k=numeric()
+MSE=numeric()
+for (i in 1:range(20)){
+  k[i] <- i
+  MSE[i] <- k_compare_func(trainPosX_X, trainPosY_X, testPosX_X, 
+                                  testPosY_X, validatation, i)
+}
+
+k_compare <- data.frame(k, MSE)
+
+ggplot(k_compare, aes(k, MSE)) + geom_line()
+
+```
+
 
 training set by time - done
 
