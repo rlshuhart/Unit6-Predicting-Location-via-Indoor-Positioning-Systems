@@ -134,41 +134,6 @@ names(trainByAvgSig)
 names(testAllMacs)
 ```
 
-
-## KNN Classification on all Macs
-```{r}
-train_Y <- factor(trainByAvgSig$posXY)
-train_X <- select(trainByAvgSig, -posXY, -posX, -posY)
-test_X <- select(testAllMacs, -posXY, -posX, -posY)
-
-#k = 1
-test_estk1 <- as.character(knn(train_X, test_X, train_Y, k=1))
-
-#k = 3
-test_estk3 <- as.character(knn(train_X, test_X, train_Y, k=3))
-
-#k = 5
-test_estk5 <- as.character(knn(train_X, test_X, train_Y, k=5))
-
-```
-
-```{r}
-errCalc <- function(EstimateXY, TruthX_Y){
-  tmp <- cbind(Est_posXY = EstimateXY, TruthX_Y) %>%
-          separate(Est_posXY, c("Est_posX", "Est_posY"), sep="-") %>%
-          select(Est_posX, Est_posY, posX, posY) %>%
-          mutate(Est_posX = as.numeric(Est_posX),
-                 Est_posY = as.numeric(Est_posY))
-  #print(tmp)
-  sum( rowSums( (tmp[,c("Est_posX", "Est_posY")] - tmp[,c("posX", "posY")])^2) )
-}
-
-errCalc(test_estk1, testAllMacs[,c("posX","posY")])
-errCalc(test_estk3, testAllMacs[,c("posX","posY")])
-errCalc(test_estk5, testAllMacs[,c("posX","posY")])
-
-```
-
 ## Ussing KNN Regression
 ```{r}
 trainPosX_Y <- trainByAvgSig$posX
@@ -194,7 +159,7 @@ test_estXk5 <- knn.reg(trainPosX_X, testPosX_X, trainPosX_Y, k=5)$pred
 test_estYk5 <- knn.reg(trainPosY_X, testPosY_X, trainPosY_Y, k=5)$pred
 test_estXYk5 <- data.frame(posX = test_estXk5, posY = test_estYk5)
 
-# MSE
+#MSE
 #sum( rowSums( (estXY - actualXY)^2) )
 sum( rowSums( (test_estXYk1 - testAllMacs[,c("posX", "posY")])^2) )
 sum( rowSums( (test_estXYk3 - testAllMacs[,c("posX", "posY")])^2) )
@@ -230,7 +195,7 @@ for (i in 1:range(20)){
 
 k_compare <- data.frame(k, MSE)
 
-ggplot(k_compare, aes(k, MSE)) + geom_line()
+ggplot(k_compare, aes(k, MSE)) + geom_line() + theme_classic()
 
 ```
 
