@@ -208,10 +208,10 @@ k=numeric()
 MSE=numeric()
 for (i in 1:range(20)){
   k[i] <- i
-  MSE[i] <- k_compare_func(trainPosX_X[,keep_ddcd_sigs], 
-                           trainPosY_X[,keep_ddcd_sigs], 
-                           testPosX_X[,keep_ddcd_sigs],
-                           testPosY_X[,keep_ddcd_sigs], validatation, i)
+  MSE[i] <- k_compare_func(trainPosX_X[,c("angle",keep_ddcd_sigs)], 
+                           trainPosY_X[,c("angle",keep_ddcd_sigs)], 
+                           testPosX_X[,c("angle",keep_ddcd_sigs)],
+                           testPosY_X[,c("angle",keep_ddcd_sigs)], validatation, i)
 }
 
 k_compare_keep_ddcd <- data.frame(k, MSE)
@@ -229,17 +229,17 @@ k=numeric()
 MSE=numeric()
 for (i in 1:range(20)){
   k[i] <- i
-  MSE[i] <- k_compare_func(trainPosX_X[,keep_e1c0_sigs], 
-                           trainPosY_X[,keep_e1c0_sigs], 
-                           testPosX_X[,keep_e1c0_sigs],
-                           testPosY_X[,keep_e1c0_sigs], validatation, i)
+  MSE[i] <- k_compare_func(trainPosX_X[,c("angle",keep_e1c0_sigs)], 
+                           trainPosY_X[,c("angle",keep_e1c0_sigs)], 
+                           testPosX_X[,c("angle",keep_e1c0_sigs)],
+                           testPosY_X[,c("angle",keep_e1c0_sigs)], validatation, i)
 }
 k_compare_keep_e1c0 <- data.frame(k, MSE)
 print(paste("The best MSE:",top_n(k_compare_keep_e1c0,-1,MSE)[2], "with a k of:", top_n(k_compare_keep_e1c0,-1,MSE)[1])) # Negative 1 is to get lowest MSE
 ```
 
 ```{r}
-ggplot(k_compare, aes(k, MSE)) + geom_line() + theme_classic()
+ggplot(k_compare_keep_e1c0, aes(k, MSE)) + geom_line() + theme_classic()
 ```
 
 training set by time - done
@@ -250,17 +250,25 @@ Training set averaged signal - done
 
 Training set weighted average signal
 
-keep only 00:0f:a3:39:e1:c0
+keep only 00:0f:a3:39:e1:c0 - done for no weighting
 
-keep only 00:0f:a3:39:dd:cd
+keep only 00:0f:a3:39:dd:cd - done for no weighting
 
-inlcude both
+inlcude both - done for no weighting
 
-Which of these two MAC addresses should be used and which should not be used for RTLS? 
+*Adding angle seems to make it worse. currently not just looking at the closest angles.
 
-Which MAC address yields the best prediction of location?
+## Which of these two MAC addresses should be used and which should not be used for RTLS? 
+It appears leaving out e1:co has the lowest MSE 
 
-Does using data for both MAC addresses simultaneously yield more, or less, accurate prediction of location?
+
+## Which MAC address yields the best prediction of location?
+00:0f:a3:39:dd:cd
+
+
+## Does using data for both MAC addresses simultaneously yield more, or less, accurate prediction of location?
+Less accurate
+
 
 For what range of values of weights are you able to obtain better prediction values than for the unweighted k-nearest neighbor approach? 
 
@@ -268,6 +276,11 @@ For what range of values of weights are you able to obtain better prediction val
 $\frac{1/d}{\sum_{i=1}^k 1/d_i}$ 
 ```{r}
 # W
-
+(1/trainPosX_X[,keep_e1c0_sigs]) / rowSums(1/trainPosX_X[,keep_e1c0_sigs])
 
 ```
+
+```{r}
+trainPosX_X[,keep_e1c0_sigs]
+```
+
