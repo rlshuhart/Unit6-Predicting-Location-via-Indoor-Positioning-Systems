@@ -35,6 +35,14 @@ testSum <- readRDS("../data/processed/onlinesummary.rds")
 ```
 
 ```{r}
+unique(test$mac)
+unique(train$mac)
+unique(testSum$mac)
+unique(trainSum$mac)
+```
+
+
+```{r}
 #Reshapes data into form simlar to testSum
 reshapeSS = function(data, varSignal = "signal", 
                      keepVars = c("posXY", "posX","posY"),
