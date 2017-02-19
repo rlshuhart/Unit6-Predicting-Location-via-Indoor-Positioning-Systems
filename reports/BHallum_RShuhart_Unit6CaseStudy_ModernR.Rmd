@@ -1,0 +1,87 @@
+---
+title: "Modern R Notebook"
+output: html_notebook
+---
+
+
+
+```{r, include=FALSE}
+# Libraries
+library(dplyr)
+library(ggplot2)
+library(DataExplorer)
+library(class) #KNN
+```
+
+## Import Pre-processed Data
+```{r}
+# Processed Data
+offline <- readRDS("../data/processed/offline.rds")
+online <- readRDS("../data/processed/online.rds")
+online_allmacs <- readRDS("./data/processed/online_allmacs.rds")
+
+# Signal List
+allsigs <- c("sig_cd", # Access Point #?
+             "sig_c0", # Access Point #?
+             "sig_c6", # Access Point #?
+             "sig_81", # Access Point #?
+             "sig_8a", # Access Point #?
+             "sig_8d", # Access Point #?
+             "sig_90"  # Access Point #?
+             )
+```
+
+
+## Create Data Set by Time
+```{r}
+trainByTime <- group_by(offline, time, posXY, mac,  angle) %>%
+  summarize(avgSig = mean(signal)) %>%
+  spread(mac, avgSig) %>%
+  rename(sig_cd = `00:0f:a3:39:dd:cd`,
+         sig_c0 = `00:0f:a3:39:e1:c0`, 
+         sig_c6 = `00:14:bf:3b:c7:c6`,
+         sig_81 = `00:14:bf:b1:97:81`,
+         sig_8a = `00:14:bf:b1:97:8a`,
+         sig_8d = `00:14:bf:b1:97:8d`,
+         sig_90 = `00:14:bf:b1:97:90`)
+
+```
+
+## Exploratoration of Offline Data
+### Missing Data
+```{r}
+PlotMissing(trainByTime)
+```
+
+### Histogram of Signal Strengths
+```{r}
+HistogramContinuous(trainByTime[,allsigs])
+```
+
+### Correlation of Signal Stregths
+```{r}
+CorrelationContinuous(trainByTime[,allsigs], use = "na.or.complete")
+```
+
+
+training set by time - done
+
+
+Training set averaged signal - 
+
+
+Training set weighted average signal
+
+keep only 00:0f:a3:39:e1:c0
+
+keep only 00:0f:a3:39:dd:cd
+
+inlcude both
+
+Which of these two MAC addresses should be used and which should not be used for RTLS? 
+
+Which MAC address yields the best prediction of location?
+
+Does using data for both MAC addresses simultaneously yield more, or less, accurate prediction of location?
+
+For what range of values of weights are you able to obtain better prediction values than for the unweighted k-nearest neighbor approach? 
