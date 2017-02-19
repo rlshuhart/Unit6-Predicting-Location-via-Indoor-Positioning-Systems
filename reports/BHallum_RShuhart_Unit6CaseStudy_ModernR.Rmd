@@ -22,14 +22,38 @@ offline <- readRDS("../data/processed/offline.rds")
 online <- readRDS("../data/processed/online.rds")
 online_allmacs <- readRDS("../data/processed/online_allmacs.rds")
 
-# Signal List
-allsigs <- c("sig_cd", # Access Point #?
-             "sig_c0", # Access Point #?
-             "sig_c6", # Access Point #?
-             "sig_81", # Access Point #?
-             "sig_8a", # Access Point #?
-             "sig_8d", # Access Point #?
-             "sig_90"  # Access Point #?
+
+# Signal Lists
+
+# All accesspoints
+allsigs <- c(
+  "sig_cd", # Access Point #?
+  "sig_c0", # Access Point #?
+  "sig_c6", # Access Point #?
+  "sig_81", # Access Point #?
+  "sig_8a", # Access Point #?
+  "sig_8d", # Access Point #?
+  "sig_90"  # Access Point #?
+             )
+
+# drop e1:c0
+keep_ddcd_sigs <- c(
+  "sig_cd", # Access Point #?
+  "sig_c6", # Access Point #?
+  "sig_81", # Access Point #?
+  "sig_8a", # Access Point #?
+  "sig_8d", # Access Point #?
+  "sig_90"  # Access Point #?
+             )
+
+# drop dd:cd
+keep_e1c0_sigs <- c(
+  "sig_c0", # Access Point #?
+  "sig_c6", # Access Point #?
+  "sig_81", # Access Point #?
+  "sig_8a", # Access Point #?
+  "sig_8d", # Access Point #?
+  "sig_90"  # Access Point #?
              )
 ```
 
