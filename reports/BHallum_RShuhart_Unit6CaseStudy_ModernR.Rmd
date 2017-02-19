@@ -129,12 +129,11 @@ testAllMacs <- group_by(online_allmacs, posXY, posX, posY, mac,  angle) %>%
          sig_8d = `00:14:bf:b1:97:8d`,
          sig_90 = `00:14:bf:b1:97:90`) 
 
-#names(trainByAvgSig)
 names(trainByAvgSig)
 names(testAllMacs)
 ```
 
-## Ussing KNN Regression
+### Using KNN Regression
 ```{r}
 trainPosX_Y <- trainByAvgSig$posX
 trainPosX_X <- select(trainByAvgSig, -posXY, -posX, -posY)
@@ -166,9 +165,8 @@ sum( rowSums( (test_estXYk3 - testAllMacs[,c("posX", "posY")])^2) )
 sum( rowSums( (test_estXYk5 - testAllMacs[,c("posX", "posY")])^2) )
 ```
 
+### Plot MSE for k 1-20 using All AP signals
 ```{r}
-validatation <- testAllMacs[,c("posX", "posY")]
-
 k_compare_func <- function(trainPosX_X, 
                            trainPosY_X, 
                            testPosX_X, 
@@ -184,7 +182,7 @@ k_compare_func <- function(trainPosX_X,
   
 }
 
-
+validatation <- testAllMacs[,c("posX", "posY")]
 k=numeric()
 MSE=numeric()
 for (i in 1:range(20)){
@@ -194,11 +192,55 @@ for (i in 1:range(20)){
 }
 
 k_compare <- data.frame(k, MSE)
+print(paste("The best MSE:",top_n(k_compare,-1,MSE)[2], "with a k of:", top_n(k_compare,-1,MSE)[1])) # Negative 1 is to get lowest MSE
+```
+
+```{r}
 
 ggplot(k_compare, aes(k, MSE)) + geom_line() + theme_classic()
 
 ```
 
+### Without e1:c0
+```{r}
+validatation <- testAllMacs[,c("posX", "posY")]
+k=numeric()
+MSE=numeric()
+for (i in 1:range(20)){
+  k[i] <- i
+  MSE[i] <- k_compare_func(trainPosX_X[,keep_ddcd_sigs], 
+                           trainPosY_X[,keep_ddcd_sigs], 
+                           testPosX_X[,keep_ddcd_sigs],
+                           testPosY_X[,keep_ddcd_sigs], validatation, i)
+}
+
+k_compare_keep_ddcd <- data.frame(k, MSE)
+print(paste("The best MSE:",top_n(k_compare_keep_ddcd,-1,MSE)[2], "with a k of:", top_n(k_compare_keep_ddcd,-1,MSE)[1]))# Negative 1 is to get lowest MSE
+```
+
+```{r}
+ggplot(k_compare_keep_ddcd, aes(k, MSE)) + geom_line() + theme_classic()
+```
+
+### Without dd:cd
+```{r}
+validatation <- testAllMacs[,c("posX", "posY")]
+k=numeric()
+MSE=numeric()
+for (i in 1:range(20)){
+  k[i] <- i
+  MSE[i] <- k_compare_func(trainPosX_X[,keep_e1c0_sigs], 
+                           trainPosY_X[,keep_e1c0_sigs], 
+                           testPosX_X[,keep_e1c0_sigs],
+                           testPosY_X[,keep_e1c0_sigs], validatation, i)
+}
+k_compare_keep_e1c0 <- data.frame(k, MSE)
+print(paste("The best MSE:",top_n(k_compare_keep_e1c0,-1,MSE)[2], "with a k of:", top_n(k_compare_keep_e1c0,-1,MSE)[1])) # Negative 1 is to get lowest MSE
+```
+
+```{r}
+ggplot(k_compare, aes(k, MSE)) + geom_line() + theme_classic()
+```
 
 training set by time - done
 
