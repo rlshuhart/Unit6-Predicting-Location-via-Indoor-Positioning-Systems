@@ -129,47 +129,11 @@ testAllMacs <- group_by(online_allmacs, posXY, posX, posY, mac,  angle) %>%
          sig_8d = `00:14:bf:b1:97:8d`,
          sig_90 = `00:14:bf:b1:97:90`) 
 
-#names(trainByAvgSig)
 names(trainByAvgSig)
 names(testAllMacs)
 ```
 
-
-## KNN Classification on all Macs
-```{r}
-train_Y <- factor(trainByAvgSig$posXY)
-train_X <- select(trainByAvgSig, -posXY, -posX, -posY)
-test_X <- select(testAllMacs, -posXY, -posX, -posY)
-
-#k = 1
-test_estk1 <- as.character(knn(train_X, test_X, train_Y, k=1))
-
-#k = 3
-test_estk3 <- as.character(knn(train_X, test_X, train_Y, k=3))
-
-#k = 5
-test_estk5 <- as.character(knn(train_X, test_X, train_Y, k=5))
-
-```
-
-```{r}
-errCalc <- function(EstimateXY, TruthX_Y){
-  tmp <- cbind(Est_posXY = EstimateXY, TruthX_Y) %>%
-          separate(Est_posXY, c("Est_posX", "Est_posY"), sep="-") %>%
-          select(Est_posX, Est_posY, posX, posY) %>%
-          mutate(Est_posX = as.numeric(Est_posX),
-                 Est_posY = as.numeric(Est_posY))
-  #print(tmp)
-  sum( rowSums( (tmp[,c("Est_posX", "Est_posY")] - tmp[,c("posX", "posY")])^2) )
-}
-
-errCalc(test_estk1, testAllMacs[,c("posX","posY")])
-errCalc(test_estk3, testAllMacs[,c("posX","posY")])
-errCalc(test_estk5, testAllMacs[,c("posX","posY")])
-
-```
-
-## Ussing KNN Regression
+### Using KNN Regression
 ```{r}
 trainPosX_Y <- trainByAvgSig$posX
 trainPosX_X <- select(trainByAvgSig, -posXY, -posX, -posY)
@@ -193,14 +157,89 @@ test_estXYk3 <- data.frame(posX = test_estXk3, posY = test_estYk3)
 test_estXk5 <- knn.reg(trainPosX_X, testPosX_X, trainPosX_Y, k=5)$pred
 test_estYk5 <- knn.reg(trainPosY_X, testPosY_X, trainPosY_Y, k=5)$pred
 test_estXYk5 <- data.frame(posX = test_estXk5, posY = test_estYk5)
-```
 
-
-```{r}
+#MSE
 #sum( rowSums( (estXY - actualXY)^2) )
 sum( rowSums( (test_estXYk1 - testAllMacs[,c("posX", "posY")])^2) )
 sum( rowSums( (test_estXYk3 - testAllMacs[,c("posX", "posY")])^2) )
 sum( rowSums( (test_estXYk5 - testAllMacs[,c("posX", "posY")])^2) )
+```
+
+### Plot MSE for k 1-20 using All AP signals
+```{r}
+k_compare_func <- function(trainPosX_X, 
+                           trainPosY_X, 
+                           testPosX_X, 
+                           testPosY_X,
+                           validatation,
+                           i){
+  estX <- knn.reg(trainPosX_X, testPosX_X, trainPosX_Y, k=i)$pred
+  estY <- knn.reg(trainPosY_X, testPosY_X, trainPosY_Y, k=i)$pred
+  
+  estXYk <- data.frame(posX = estX, posY = estY)
+  
+  sum( rowSums( (estXYk - validatation)^2) )
+  
+}
+
+validatation <- testAllMacs[,c("posX", "posY")]
+k=numeric()
+MSE=numeric()
+for (i in 1:range(20)){
+  k[i] <- i
+  MSE[i] <- k_compare_func(trainPosX_X, trainPosY_X, testPosX_X, 
+                                  testPosY_X, validatation, i)
+}
+
+k_compare <- data.frame(k, MSE)
+print(paste("The best MSE:",top_n(k_compare,-1,MSE)[2], "with a k of:", top_n(k_compare,-1,MSE)[1])) # Negative 1 is to get lowest MSE
+```
+
+```{r}
+
+ggplot(k_compare, aes(k, MSE)) + geom_line() + theme_classic()
+
+```
+
+### Without e1:c0
+```{r}
+validatation <- testAllMacs[,c("posX", "posY")]
+k=numeric()
+MSE=numeric()
+for (i in 1:range(20)){
+  k[i] <- i
+  MSE[i] <- k_compare_func(trainPosX_X[,c("angle",keep_ddcd_sigs)], 
+                           trainPosY_X[,c("angle",keep_ddcd_sigs)], 
+                           testPosX_X[,c("angle",keep_ddcd_sigs)],
+                           testPosY_X[,c("angle",keep_ddcd_sigs)], validatation, i)
+}
+
+k_compare_keep_ddcd <- data.frame(k, MSE)
+print(paste("The best MSE:",top_n(k_compare_keep_ddcd,-1,MSE)[2], "with a k of:", top_n(k_compare_keep_ddcd,-1,MSE)[1]))# Negative 1 is to get lowest MSE
+```
+
+```{r}
+ggplot(k_compare_keep_ddcd, aes(k, MSE)) + geom_line() + theme_classic()
+```
+
+### Without dd:cd
+```{r}
+validatation <- testAllMacs[,c("posX", "posY")]
+k=numeric()
+MSE=numeric()
+for (i in 1:range(20)){
+  k[i] <- i
+  MSE[i] <- k_compare_func(trainPosX_X[,c("angle",keep_e1c0_sigs)], 
+                           trainPosY_X[,c("angle",keep_e1c0_sigs)], 
+                           testPosX_X[,c("angle",keep_e1c0_sigs)],
+                           testPosY_X[,c("angle",keep_e1c0_sigs)], validatation, i)
+}
+k_compare_keep_e1c0 <- data.frame(k, MSE)
+print(paste("The best MSE:",top_n(k_compare_keep_e1c0,-1,MSE)[2], "with a k of:", top_n(k_compare_keep_e1c0,-1,MSE)[1])) # Negative 1 is to get lowest MSE
+```
+
+```{r}
+ggplot(k_compare_keep_e1c0, aes(k, MSE)) + geom_line() + theme_classic()
 ```
 
 training set by time - done
@@ -211,17 +250,25 @@ Training set averaged signal - done
 
 Training set weighted average signal
 
-keep only 00:0f:a3:39:e1:c0
+keep only 00:0f:a3:39:e1:c0 - done for no weighting
 
-keep only 00:0f:a3:39:dd:cd
+keep only 00:0f:a3:39:dd:cd - done for no weighting
 
-inlcude both
+inlcude both - done for no weighting
 
-Which of these two MAC addresses should be used and which should not be used for RTLS? 
+*Adding angle seems to make it worse. currently not just looking at the closest angles.
 
-Which MAC address yields the best prediction of location?
+## Which of these two MAC addresses should be used and which should not be used for RTLS? 
+It appears leaving out e1:co has the lowest MSE 
 
-Does using data for both MAC addresses simultaneously yield more, or less, accurate prediction of location?
+
+## Which MAC address yields the best prediction of location?
+00:0f:a3:39:dd:cd
+
+
+## Does using data for both MAC addresses simultaneously yield more, or less, accurate prediction of location?
+Less accurate
+
 
 For what range of values of weights are you able to obtain better prediction values than for the unweighted k-nearest neighbor approach? 
 
@@ -229,6 +276,11 @@ For what range of values of weights are you able to obtain better prediction val
 $\frac{1/d}{\sum_{i=1}^k 1/d_i}$ 
 ```{r}
 # W
-
+(1/trainPosX_X[,keep_e1c0_sigs]) / rowSums(1/trainPosX_X[,keep_e1c0_sigs])
 
 ```
+
+```{r}
+trainPosX_X[,keep_e1c0_sigs]
+```
+
