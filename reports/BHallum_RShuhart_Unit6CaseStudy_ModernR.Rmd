@@ -373,45 +373,6 @@ For what range of values of weights are you able to obtain better prediction val
 $\frac{1/d}{\sum_{i=1}^k 1/d_i}$ 
 ```{r}
 # W
-(1/offline_signals[,keep_e1c0_sigs]) / rowSums(1/offline_signals[,keep_e1c0_sigs])
+cbind(offline_signals[,c("")],(1/offline_signals) / rowSums(1/offline_signals)
 
-```
-
-```{r}
-offline_signals[,keep_e1c0_sigs]
-```
-
-```{r}
-offline_posX <- offlineByAvgSig$posX
-offline_posY <- offlineByAvgSig$posY
-offline_signals <- select(offlineByAvgSig, -posXY, -posX, -posY, -angle)
-online_signals <- select(onlineByAvgSig, -posXY, -posX, -posY, -angle)
-
-k_compare_func2 <- function(offline_signals, 
-                           online_signals, 
-                           offline_posX, 
-                           offline_posY,
-                           validatation,
-                           i){
-  
-  estX <- knn.reg(offline_signals, online_signals, offline_posX, k=i)$pred
-  estY <- knn.reg(offline_signals, online_signals, offline_posY, k=i)$pred
-  
-  estXYk <- data.frame(posX = estX, posY = estY)
-  
-  sum( rowSums( (estXYk - validatation)^2) )
-  
-}
-
-validatation <- onlineByAvgSig[,c("posX", "posY")]
-k=numeric()
-MSE=numeric()
-for (i in 1:range(20)){
-  k[i] <- i
-  MSE[i] <- k_compare_func2(offline_signals, online_signals, offline_posX, 
-                                  offline_posY, validatation, i)
-}
-
-k_compare <- data.frame(k, MSE)
-print(paste("The best MSE:",top_n(k_compare,-1,MSE)[2], "with a k of:", top_n(k_compare,-1,MSE)[1])) # Negative 1 is to get lowest MSE
 ```
