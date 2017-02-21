@@ -370,9 +370,23 @@ more accurate
 For what range of values of weights are you able to obtain better prediction values than for the unweighted k-nearest neighbor approach? 
 
 ## Weighted
-$\frac{1/d}{\sum_{i=1}^k 1/d_i}$ 
+
+In attempt to impove the predicted location, stronger signals will be upweighted relative to the other.
+## $\frac{1/d}{\sum_{i=1}^k 1/d_i}$ 
 ```{r}
 # W
-cbind(offline_signals[,c("")],(1/offline_signals) / rowSums(1/offline_signals)
+
+wt_signals <- function(ByAvgSig){
+  signals <- select(ByAvgSig, -posXY, -posX, -posY, -angle) 
+  loc_ang <- select(ByAvgSig, posXY, posX, posY, angle)
+  
+  weighted_signals <- (1/signals) / rowSums(1/signals)
+  
+  return(cbind(loc_ang, weighted_signals))
+}
+
+wtOfflineByAvgSig <- wt_signals(offlineByAvgSig)
+wtOnlineByAvgSig <- wt_signals(onlineByAvgSig)
+
 
 ```
