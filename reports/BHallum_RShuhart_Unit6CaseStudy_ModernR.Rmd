@@ -37,7 +37,7 @@ library(FNN) #KNN Regression
 offline <- readRDS("../data/processed/offline.rds")
 online_allmacs <- readRDS("../data/processed/online_allmacs.rds")
 
-# All accesspoints
+# All accessd points
 allsigs <- c(
   "sig_cd", # Access Point #?
   "sig_c0", # Access Point #?
@@ -110,7 +110,7 @@ ggplot(building, aes(x=posX, y=posY)) +
 
 #### Missing Data
 ```{r}
-offlineByTime[,allsigs] %>% summarize_each(funs(sum(is.na(.))))
+offlineByTime %>% summarize_each(funs(sum(is.na(.))))
 ```
 ```{r}
 PlotMissing(offlineByTime)
@@ -156,7 +156,7 @@ head(offlineByAvgSig)
 
 #### Check if Missing Data After Average Aggregation
 ```{r}
-offlineByAvgSig[,allsigs] %>% summarize_each(funs(sum(is.na(.))))
+offlineByAvgSig %>% summarize_each(funs(sum(is.na(.))))
 ```
 
 ### Online Data
@@ -215,8 +215,8 @@ sum( rowSums( (test_estXYk3 - onlineByAvgSig[,c("posX", "posY")])^2) )
 sum( rowSums( (test_estXYk5 - onlineByAvgSig[,c("posX", "posY")])^2) )
 ```
 
-
-```{r}
+functions hidden below
+```{r, echo=TRUE}
 # function to estimate using KNN the X Y of the online data
 predictXYKNN <- function(offline_signals, online_signals, 
                          offline_posX, offline_posY, k){
@@ -284,59 +284,41 @@ k_Eval <- function(offlineByAvgSig, onlineByAvgSig, k_max){
   }
   return(data.frame(k=ks, MSE=MSE))
 }
+
+plot_k_eval <- function(df, title=NULL){
+  ggplot(df, aes(k, MSE)) + 
+    geom_line() + 
+    theme_classic() + 
+    labs(title=title) +
+    geom_text(data=top_n(df,-1,MSE), aes(label=MSE), nudge_y = 20)
+}
+
 ```
 
 
 ### Plot MSE for k 1-20 using All AP signals
 ```{r}
 k_20 <- k_Eval(offlineByAvgSig, onlineByAvgSig, 20)
+plot_k_eval(k_20, "Using all 7 AP Signals")
 print(paste("The best MSE:",top_n(k_20,-1,MSE)[2], "with a k of:", top_n(k_20,-1,MSE)[1])) # Negative 1 is to get lowest MSE
 ```
-
-```{r}
-# Plot of MSE for K with all AP signals
-ggplot(k_20, aes(k, MSE)) + 
-  geom_line() + 
-  theme_classic() + 
-  labs(title="Using all 7 AP Signals") +
-  geom_text(data=top_n(k_20,-1,MSE), aes(label=MSE), nudge_y = 20)
-
-```
-
 
 ### Without e1:c0
 ```{r}
 k_20_no_e1c0 <- k_Eval(select(offlineByAvgSig, -sig_c0), 
                        select(onlineByAvgSig, -sig_c0), 20)
-print(paste("The best MSE:",top_n(k_20_no_e1c0,-1,MSE)[2], "with a k of:", top_n(k_20_no_e1c0,-1,MSE)[1])) # Negative 1 is to get lowest MSE
+plot_k_eval(k_20_no_e1c0, "Using 00:0f:a3:39:dd:cd AP Signal")
+print(paste("The best MSE:",top_n(k_20_no_e1c0,-1,MSE)[2], "with a k of:",
+            top_n(k_20_no_e1c0,-1,MSE)[1])) # Negative 1 is to get lowest MSE
 ```
-```{r}
-# Plot of MSE for K without e1:c0
-ggplot(k_20_no_e1c0, aes(k, MSE)) + 
-  geom_line() + 
-  theme_classic() + 
-  labs(title="Using 00:0f:a3:39:dd:cd AP Signal") +
-  geom_text(data=top_n(k_20_no_e1c0,-1,MSE), aes(label=MSE), nudge_y = 20)
-
-```
-
 ### Without dd:cd
 ```{r}
 k_20_no_ddcd <- k_Eval(select(offlineByAvgSig, -sig_cd), 
                        select(onlineByAvgSig, -sig_cd), 20)
-print(paste("The best MSE:",top_n(k_20_no_ddcd,-1,MSE)[2], "with a k of:", top_n(k_20_no_e1c0,-1,MSE)[1])) # Negative 1 is to get lowest MSE
+plot_k_eval(k_20_no_ddcd, "Using 00:0f:a3:39:e1:c0 AP Signal")
+print(paste("The best MSE:",top_n(k_20_no_ddcd,-1,MSE)[2], "with a k of:",
+            top_n(k_20_no_e1c0,-1,MSE)[1])) # Negative 1 is to get lowest MSE
 ```
-```{r}
-# Plot of MSE for K without dd:cd
-ggplot(k_20_no_ddcd, aes(k, MSE)) + 
-  geom_line() + 
-  theme_classic() + 
-  labs(title="Using 00:0f:a3:39:e1:c0 AP Signal") +
-  geom_text(data=top_n(k_20_no_ddcd,-1,MSE), aes(label=MSE), nudge_y = 20)
-
-```
-
-
 
 ## Which of these two MAC addresses should be used and which should not be used for RTLS? 
 It appears keeping both has the lowest MSE 
@@ -374,15 +356,25 @@ wtOnlineByAvgSig <- wt_signals(onlineByAvgSig)
 
 ```{r}
 wtK_20 <- k_Eval(wtOfflineByAvgSig, wtOnlineByAvgSig, 20)
-print(paste("The best MSE:",top_n(wtK_20,-1,MSE)[2], "with a k of:", top_n(wtK_20,-1,MSE)[1])) # Negative 1 is to get lowest MSE
+plot_k_eval(wtK_20, "Weighted All AP Signals")
+print(paste("The best MSE:",top_n(wtK_20,-1,MSE)[2], "with a k of:", 
+            top_n(wtK_20,-1,MSE)[1])) # Negative 1 is to get lowest MSE
+```
+```{r}
+wtk_20_no_e1c0 <- k_Eval(select(wtOfflineByAvgSig, -sig_c0), 
+                       select(wtOnlineByAvgSig, -sig_c0), 20)
+plot_k_eval(wtk_20_no_e1c0, "Weighted Using 00:0f:a3:39:dd:cd AP Signal")
+print(paste("The best MSE:",top_n(wtk_20_no_e1c0,-1,MSE)[2], "with a k of:",
+            top_n(wtk_20_no_e1c0,-1,MSE)[1])) # Negative 1 is to get lowest MSE
 ```
 
 ```{r}
-# Plot of MSE for K without dd:cd
-ggplot(wtK_20, aes(k, MSE)) + 
-  geom_line() + 
-  theme_classic() + 
-  labs(title="Weighted All AP Signals") +
-  geom_text(data=top_n(wtK_20,-1,MSE), aes(label=MSE), nudge_y = 20)
+wtk_20_no_ddcd <- k_Eval(select(wtOfflineByAvgSig, -sig_cd), 
+                       select(wtOnlineByAvgSig, -sig_cd), 20)
+plot_k_eval(wtk_20_no_ddcd, "Using 00:0f:a3:39:e1:c0 AP Signal")
+print(paste("The best MSE:",top_n(wtk_20_no_ddcd,-1,MSE)[2], "with a k of:",
+            top_n(wtk_20_no_ddcd,-1,MSE)[1])) # Negative 1 is to get lowest MSE
 ```
+```
+
 
