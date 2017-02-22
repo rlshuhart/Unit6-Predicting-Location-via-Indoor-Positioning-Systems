@@ -4,7 +4,7 @@ subtitle: MSDS 7333-401
 author: "Brett Hallum, Chris Ficklin, and Ryan Shuhart"
 date: February 2016
 output: html_notebook
-#output: pdf_document <- to be used for submission
+#output: pdf_document #<- to be used for submission
 ---
 ## Abstract
 blah blah blah...
@@ -153,6 +153,7 @@ offlineByAvgSig <- group_by(offline, posXY, posX, posY, mac,  angle) %>%
 head(offlineByAvgSig)
 
 ```
+
 #### Check if Missing Data After Average Aggregation
 ```{r}
 offlineByAvgSig[,allsigs] %>% summarize_each(funs(sum(is.na(.))))
@@ -251,7 +252,7 @@ k_Eval <- function(offlineByAvgSig, onlineByAvgSig, k_max){
       angleLeft <- (ang - 45 + 360)%%360
       angleRight <-(ang + 45 + 360)%%360
   
-      offline_signals <- select(
+      offline_signals <- select( 
         filter(offlineByAvgSig, angle %in% c(angleLeft, ang, angleRight)), 
         -posXY, -posX, -posY, -angle)
       
@@ -337,24 +338,6 @@ ggplot(k_20_no_ddcd, aes(k, MSE)) +
 
 
 
-
-
-training set by time - done
-
-
-Training set averaged signal - done
-
-
-Training set weighted average signal
-
-keep only 00:0f:a3:39:e1:c0 - done for no weighting
-
-keep only 00:0f:a3:39:dd:cd - done for no weighting
-
-inlcude both - done for no weighting
-
-*Adding angle seems to make it worse. currently not just looking at the closest angles.
-
 ## Which of these two MAC addresses should be used and which should not be used for RTLS? 
 It appears keeping both has the lowest MSE 
 
@@ -387,6 +370,19 @@ wt_signals <- function(ByAvgSig){
 
 wtOfflineByAvgSig <- wt_signals(offlineByAvgSig)
 wtOnlineByAvgSig <- wt_signals(onlineByAvgSig)
-
-
 ```
+
+```{r}
+wtK_20 <- k_Eval(wtOfflineByAvgSig, wtOnlineByAvgSig, 20)
+print(paste("The best MSE:",top_n(wtK_20,-1,MSE)[2], "with a k of:", top_n(wtK_20,-1,MSE)[1])) # Negative 1 is to get lowest MSE
+```
+
+```{r}
+# Plot of MSE for K without dd:cd
+ggplot(wtK_20, aes(k, MSE)) + 
+  geom_line() + 
+  theme_classic() + 
+  labs(title="Weighted All AP Signals") +
+  geom_text(data=top_n(wtK_20,-1,MSE), aes(label=MSE), nudge_y = 20)
+```
+
