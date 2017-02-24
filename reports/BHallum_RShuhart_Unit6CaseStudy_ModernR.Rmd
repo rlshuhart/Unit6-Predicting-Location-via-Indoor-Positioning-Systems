@@ -382,7 +382,7 @@ print(paste("The best MSE:",top_n(wtk_20_no_ddcd,-1,MSE)[2], "with a k of:",
 
 
 ```{r, fig.height=5, fig.width=7}
-k_20_Diffs <- pred_XY_Nbr_Ang(offlineByAvgSig, onlineByAvgSig, 4)
+k_4_all_sig_no_wt <- pred_XY_Nbr_Ang(offlineByAvgSig, onlineByAvgSig, 4)
 
 p <- ggplot(building, aes(x=posX, y=posY)) + 
         geom_point(aes(shape=Type, color=Type)) + 
@@ -401,7 +401,7 @@ p <- ggplot(building, aes(x=posX, y=posY)) +
               panel.grid.minor=element_blank(),
               axis.ticks=element_blank())
 
-p + geom_segment(data=k_20_Diffs, aes(x = posX, y=posY, xend = posXest, yend = posYest), color="red", size=1)
+p + geom_segment(data=k_4_all_sig_no_wt, aes(x = posX, y=posY, xend = posXest, yend = posYest), color="red", size=1)
 
 ```
 
