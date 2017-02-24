@@ -1,11 +1,12 @@
 ---
 title: "Predicting Location via Indoor Positioning Systems"
 author: "Brett Hallum, Chris Ficklin, and Ryan Shuhart"
-date: "February 2016"
+date: February 2017
 output:
   html_document: default
   html_notebook: default
 subtitle: MSDS 7333-401
+#output: pdf_document #<- to be used for submission
 ---
 ## Abstract
 blah blah blah...
@@ -234,6 +235,49 @@ predictXYKNN <- function(offline_signals, online_signals,
   return(estXYk)
 }
 
+pred_XY_Nbr_Ang <- function(offlineByAvgSig, onlineByAvgSig, k){
+  results <- data.frame(posXest=numeric(), posYest=numeric(), posX=numeric(),  posY=numeric())
+  
+  possibleAngles <- c(0,  45,  90, 135, 180, 225, 270, 315)
+  
+  # Goes through all possible online angles and runs KNN only on a filtered
+  # offline group containing only the neighboring angles. Each group is a set
+  # of online observations sharing the same angle. This group then uses KNN
+  # on the offline group with the same angle and the angles directly to the 
+  # left and right. After all the possible online angles are predicted, the
+  # results are scored.
+  for (ang in possibleAngles){ 
+    angleLeft <- (ang - 45 + 360)%%360
+    angleRight <-(ang + 45 + 360)%%360
+    
+    offline_signals <- select( 
+      filter(offlineByAvgSig, angle %in% c(angleLeft, ang, angleRight)), 
+      -posXY, -posX, -posY, -angle)
+    
+    offline_posX <- select(
+      filter(offlineByAvgSig, angle %in% c(angleLeft, ang, angleRight)), 
+      posX)
+    
+    offline_posY <- select(
+      filter(offlineByAvgSig, angle %in% c(angleLeft, ang, angleRight)), 
+      posY)
+    
+    online_signals <- select(
+      filter(onlineByAvgSig, angle == ang),
+      -posXY, -posX, -posY, -angle)
+    
+    online_positions_val <- select(
+      filter(onlineByAvgSig, angle == ang),
+      posX, posY)
+    
+    estXY <- predictXYKNN(offline_signals, online_signals, 
+                          offline_posX, offline_posY, k)
+    
+    # The results of each group have to be combined before scoring
+    results <- rbind(results, cbind(estXY, online_positions_val))
+  }
+  return(results)
+}
 
 # function to evaluate a series of k values and only looking at angle directly
 # to the left or the right
@@ -243,49 +287,9 @@ k_Eval <- function(offlineByAvgSig, onlineByAvgSig, k_max){
   
   for (k in 1:k_max){
     ks[k] <- k
-    resdf <- data.frame(posXest=numeric(), posYest=numeric(), posX=numeric(),  posY=numeric())
-    
-    possibleAngles <- c(0,  45,  90, 135, 180, 225, 270, 315)
-    
-    # Goes through all possible online angles and runs KNN only on a filtered
-    # offline group containing only the neighboring angles. Each group is a set
-    # of online observations sharing the same angle. This group then uses KNN
-    # on the offline group with the same angle and the angles directly to the 
-    # left and right. After all the possible online angles are predicted, the
-    # results are scored.
-    for (ang in possibleAngles){ 
-      angleLeft <- (ang - 45 + 360)%%360
-      angleRight <-(ang + 45 + 360)%%360
-  
-      offline_signals <- select( 
-        filter(offlineByAvgSig, angle %in% c(angleLeft, ang, angleRight)), 
-        -posXY, -posX, -posY, -angle)
-      
-      offline_posX <- select(
-        filter(offlineByAvgSig, angle %in% c(angleLeft, ang, angleRight)), 
-        posX)
-      
-      offline_posY <- select(
-        filter(offlineByAvgSig, angle %in% c(angleLeft, ang, angleRight)), 
-        posY)
-    
-      online_signals <- select(
-        filter(onlineByAvgSig, angle == ang),
-        -posXY, -posX, -posY, -angle)
-      
-      online_positions_val <- select(
-        filter(onlineByAvgSig, angle == ang),
-        posX, posY)
-      
-      estXY <- predictXYKNN(offline_signals, online_signals, 
-                             offline_posX, offline_posY, k)
-    
-      # The results of each group have to be combined before scoring
-      resdf <- rbind(resdf, cbind(estXY, online_positions_val))
-    }
-    
+    results <- pred_XY_Nbr_Ang(offlineByAvgSig, onlineByAvgSig, k)
     #MSE of all the completed online predictions
-    MSE[k] <- sum( rowSums( (resdf[,c("posXest","posYest")] - resdf[,c("posX","posY")])^2) )
+    MSE[k] <- sum( rowSums( (results[,c("posXest","posYest")] - results[,c("posX","posY")])^2) )
   }
   return(data.frame(k=ks, MSE=MSE))
 }
@@ -387,3 +391,26 @@ print(paste("The best MSE:",top_n(wtk_20_no_ddcd,-1,MSE)[2], "with a k of:",
 ```
 From the above results, it seems that by weighting the signal strength, our estimate of distance, we do not improve the accuracy of the nearest neighbor calculation. Without weighting we saw an MSE of 201.34 while we see an MSE of 335.45 with the weighting. Removing 00:0f:a3:39:e1:c0 instead of 00:0f:a3:39:dd:cd still provides the best accuracy result. For the case of weighting, it also is not advised to leave both signals in, as only have 6 signals with 00:0f:a3:39:dd:cd included produces the best MSE of 335.45 compared to the MSE of all 7 routers included of 335.70.
 
+```{r, fig.height=5, fig.width=7}
+k_4_all_sig_no_wt <- pred_XY_Nbr_Ang(offlineByAvgSig, onlineByAvgSig, 4)
+
+p <- ggplot(building, aes(x=posX, y=posY)) + 
+        geom_point(aes(shape=Type, color=Type)) + 
+        geom_text(data=filter(AP, !(Label %in% c("sig_90", "sig_8d"))), aes(label=Label), nudge_y = -.6) +
+        geom_text(data=filter(AP, Label == "sig_90"), aes(label=Label), nudge_x = 2) +
+        geom_text(data=filter(AP, Label == "sig_8d"), aes(label=Label), nudge_x = -2) +
+        labs(title="Floor Plan") + 
+        scale_shape_manual(values = c(8,16,1)) +
+        scale_colour_manual(values=c("red","black","blue")) +
+        theme_bw() +
+        theme(axis.title.x=element_blank(), 
+              axis.title.y=element_blank(), 
+              axis.text.x=element_blank(), 
+              axis.text.y=element_blank(),
+              panel.grid.major=element_blank(),
+              panel.grid.minor=element_blank(),
+              axis.ticks=element_blank())
+
+p + geom_segment(data=k_4_all_sig_no_wt, aes(x = posX, y=posY, xend = posXest, yend = posYest), color="red", size=1)
+
+```
