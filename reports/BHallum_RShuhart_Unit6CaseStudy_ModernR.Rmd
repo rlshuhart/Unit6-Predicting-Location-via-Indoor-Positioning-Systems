@@ -1,10 +1,11 @@
 ---
 title: "Predicting Location via Indoor Positioning Systems"
-subtitle: MSDS 7333-401
 author: "Brett Hallum, Chris Ficklin, and Ryan Shuhart"
-date: February 2016
-output: html_notebook
-#output: pdf_document #<- to be used for submission
+date: "February 2016"
+output:
+  html_document: default
+  html_notebook: default
+subtitle: MSDS 7333-401
 ---
 ## Abstract
 blah blah blah...
@@ -95,7 +96,7 @@ ggplot(building, aes(x=posX, y=posY)) +
   geom_text(data=filter(AP, !(Label %in% c("sig_90", "sig_8d"))), aes(label=Label), nudge_y = -.6) +
   geom_text(data=filter(AP, Label == "sig_90"), aes(label=Label), nudge_x = 2) +
   geom_text(data=filter(AP, Label == "sig_8d"), aes(label=Label), nudge_x = -2) +
-  labs(title="Floor Plan") + 
+  labs(title="(Fig. 1) Floor Plan") + 
   scale_shape_manual(values = c(8,16,1)) +
   scale_colour_manual(values=c("red","black","blue")) +
   theme_bw() +
@@ -108,15 +109,16 @@ ggplot(building, aes(x=posX, y=posY)) +
         axis.ticks=element_blank())
 ```
 
-#### Missing Data
+### Missing Data
 ```{r}
 offlineByTime %>% summarize_each(funs(sum(is.na(.))))
 ```
+#### (Fig. 2) Missing Data per Router by Percent
 ```{r}
 PlotMissing(offlineByTime)
 ```
 
-[...Insert commentary about the missing data...]
+Many of the routers do not receive data about each of the data points from the device. From the missing data, we see that each receiver misses about 18% of the signals produced by emitting device. This contrasts with 2 of the routers, 00:0f:a3:39:dd:cd and 00:0f:a3:39:e1:c0, which miss around 1% of the signals emitted.
 
 ```{r}
 paste("There are ", format(sum(complete.cases(offlineByTime)),big.mark=",",scientific=FALSE),
@@ -126,12 +128,12 @@ paste("There are ", format(sum(complete.cases(offlineByTime)),big.mark=",",scien
 
 
 
-#### Histogram of Signal Strengths
+#### (Fig. 3) Histogram of Signal Strengths
 ```{r}
 HistogramContinuous(offlineByTime[,allsigs])
 ```
 
-#### Correlation of Signal Stregths <- Might be something to dicuss here or maybe not
+#### (Fig. 4) Correlation of Signal Stregths <- Might be something to dicuss here or maybe not
 ```{r}
 CorrelationContinuous(offlineByTime[,allsigs], use = "na.or.complete")
 ```
@@ -160,14 +162,14 @@ offlineByAvgSig %>% summarize_each(funs(sum(is.na(.))))
 ```
 
 ### Online Data
-Online Data has duplicate observations given the time, position, mac, and angle
+Online Data has duplicate observations given the time, position, mac, and angle.
 ```{r}
 percDuplicated <- nrow(online_allmacs[duplicated(online_allmacs[,c("time", "posXY", "mac", "angle")]),])/nrow(online_allmacs)
 
 paste(sprintf("%.1f", percDuplicated*100), "% of the online observations are duplicated.", sep="")
 ```
 
-Online data used for knn will average the signal observations 
+The online data used for knn will average each of the signal observations.
 ```{r}
 onlineByAvgSig <- group_by(online_allmacs, posXY, posX, posY, mac,  angle) %>%
   summarize(avgSig = mean(signal)) %>%
@@ -214,6 +216,9 @@ sum( rowSums( (test_estXYk1 - onlineByAvgSig[,c("posX", "posY")])^2) )
 sum( rowSums( (test_estXYk3 - onlineByAvgSig[,c("posX", "posY")])^2) )
 sum( rowSums( (test_estXYk5 - onlineByAvgSig[,c("posX", "posY")])^2) )
 ```
+The above results show that, without accounting for the angle of the signal and limiting the possible location based on angle that the signal was received at, we get the best KNN result when using K=5. This leads to an mean square error of 252.47, which is significantly better than the K=1 MSE of 529.04 and marginally better than the MSE for K=3 of 267.63.
+
+We want to improve these results by limiting the angle observed and using the best possible K within the KNN prediction. The following functions and graphs achieve both of these goals.
 
 functions hidden below
 ```{r, echo=TRUE}
@@ -299,7 +304,7 @@ plot_k_eval <- function(df, title=NULL){
 ### Plot MSE for k 1-20 using All AP signals
 ```{r}
 k_20 <- k_Eval(offlineByAvgSig, onlineByAvgSig, 20)
-plot_k_eval(k_20, "Using all 7 AP Signals")
+plot_k_eval(k_20, "(Fig. 5) Using all 7 AP Signals")
 print(paste("The best MSE:",top_n(k_20,-1,MSE)[2], "with a k of:", top_n(k_20,-1,MSE)[1])) # Negative 1 is to get lowest MSE
 ```
 
@@ -307,7 +312,7 @@ print(paste("The best MSE:",top_n(k_20,-1,MSE)[2], "with a k of:", top_n(k_20,-1
 ```{r}
 k_20_no_e1c0 <- k_Eval(select(offlineByAvgSig, -sig_c0), 
                        select(onlineByAvgSig, -sig_c0), 20)
-plot_k_eval(k_20_no_e1c0, "Using 00:0f:a3:39:dd:cd AP Signal")
+plot_k_eval(k_20_no_e1c0, "(Fig. 6) Using 00:0f:a3:39:dd:cd AP Signal")
 print(paste("The best MSE:",top_n(k_20_no_e1c0,-1,MSE)[2], "with a k of:",
             top_n(k_20_no_e1c0,-1,MSE)[1])) # Negative 1 is to get lowest MSE
 ```
@@ -315,29 +320,33 @@ print(paste("The best MSE:",top_n(k_20_no_e1c0,-1,MSE)[2], "with a k of:",
 ```{r}
 k_20_no_ddcd <- k_Eval(select(offlineByAvgSig, -sig_cd), 
                        select(onlineByAvgSig, -sig_cd), 20)
-plot_k_eval(k_20_no_ddcd, "Using 00:0f:a3:39:e1:c0 AP Signal")
+plot_k_eval(k_20_no_ddcd, "(Fig. 7) Using 00:0f:a3:39:e1:c0 AP Signal")
 print(paste("The best MSE:",top_n(k_20_no_ddcd,-1,MSE)[2], "with a k of:",
-            top_n(k_20_no_e1c0,-1,MSE)[1])) # Negative 1 is to get lowest MSE
+            top_n(k_20_no_ddcd,-1,MSE)[1])) # Negative 1 is to get lowest MSE
 ```
+From the graphs above, we are able to determine the best value of K to use when predicting the location of the signal reading device. We find the best K to use for utilizing all 7 routers is 4, which leads to an MSE of 201.34. When the router 00:0f:a3:39:e1:c0 is removed from the list, we use a K of 8 to obtain the best MSE of 207.23. Finally, removing the router 00:0f:a3:39:dd:cd, as is done by the original research team, results in a K of 5 with an MSE of 264.20.
 
-## Which of these two MAC addresses should be used and which should not be used for RTLS? 
+From these results, we determine that the best method of determining location is to leave both of the routers included in the data set as it produces the smallest error, and thus, better accuracy. However, we know that there are only supposed to by 6 routers and these 2 that we are testing for elimination, are tagged at being in the same spot. Knowing that, it would be ideal to remove 00:0f:a3:39:e1:c0 instead of 00:0f:a3:39:dd:cd to achieve a smaller error when predicting the location of the device.
+
+#### Which of these two MAC addresses should be used and which should not be used for RTLS? 
 It appears keeping both has the lowest MSE 
 
 
-## Which MAC address yields the best prediction of location?
+#### Which MAC address yields the best prediction of location?
 00:0f:a3:39:dd:cd
 
 
-## Does using data for both MAC addresses simultaneously yield more, or less, accurate prediction of location?
+#### Does using data for both MAC addresses simultaneously yield more, or less, accurate prediction of location?
 more accurate
 
 
 For what range of values of weights are you able to obtain better prediction values than for the unweighted k-nearest neighbor approach? 
 
-## Weighted
+### Weighted
 
-In attempt to impove the predicted location, stronger signals will be upweighted relative to the other.
-## $\frac{1/d}{\sum_{i=1}^k 1/d_i}$ 
+In attempt to improve the accuracy of predicting location, stronger signals will be up-weighted relative to the other. This will allow us to give stronger, closer signals a larger impact on determining the location than those that are weaker and further away. We use the weighting fraction below to achieve this result.
+
+#### $\frac{1/d}{\sum_{i=1}^k 1/d_i}$ 
 ```{r}
 # W
 
@@ -356,14 +365,15 @@ wtOnlineByAvgSig <- wt_signals(onlineByAvgSig)
 
 ```{r}
 wtK_20 <- k_Eval(wtOfflineByAvgSig, wtOnlineByAvgSig, 20)
-plot_k_eval(wtK_20, "Weighted All AP Signals")
+plot_k_eval(wtK_20, "(Fig. 8) Weighted All AP Signals")
 print(paste("The best MSE:",top_n(wtK_20,-1,MSE)[2], "with a k of:", 
             top_n(wtK_20,-1,MSE)[1])) # Negative 1 is to get lowest MSE
 ```
+
 ```{r}
 wtk_20_no_e1c0 <- k_Eval(select(wtOfflineByAvgSig, -sig_c0), 
                        select(wtOnlineByAvgSig, -sig_c0), 20)
-plot_k_eval(wtk_20_no_e1c0, "Weighted Using 00:0f:a3:39:dd:cd AP Signal")
+plot_k_eval(wtk_20_no_e1c0, "(Fig. 9) Weighted Using 00:0f:a3:39:dd:cd AP Signal")
 print(paste("The best MSE:",top_n(wtk_20_no_e1c0,-1,MSE)[2], "with a k of:",
             top_n(wtk_20_no_e1c0,-1,MSE)[1])) # Negative 1 is to get lowest MSE
 ```
@@ -371,10 +381,9 @@ print(paste("The best MSE:",top_n(wtk_20_no_e1c0,-1,MSE)[2], "with a k of:",
 ```{r}
 wtk_20_no_ddcd <- k_Eval(select(wtOfflineByAvgSig, -sig_cd), 
                        select(wtOnlineByAvgSig, -sig_cd), 20)
-plot_k_eval(wtk_20_no_ddcd, "Using 00:0f:a3:39:e1:c0 AP Signal")
+plot_k_eval(wtk_20_no_ddcd, "(Fig. 10) Using 00:0f:a3:39:e1:c0 AP Signal")
 print(paste("The best MSE:",top_n(wtk_20_no_ddcd,-1,MSE)[2], "with a k of:",
             top_n(wtk_20_no_ddcd,-1,MSE)[1])) # Negative 1 is to get lowest MSE
 ```
-```
-
+From the above results, it seems that by weighting the signal strength, our estimate of distance, we do not improve the accuracy of the nearest neighbor calculation. Without weighting we saw an MSE of 201.34 while we see an MSE of 335.45 with the weighting. Removing 00:0f:a3:39:e1:c0 instead of 00:0f:a3:39:dd:cd still provides the best accuracy result. For the case of weighting, it also is not advised to leave both signals in, as only have 6 signals with 00:0f:a3:39:dd:cd included produces the best MSE of 335.45 compared to the MSE of all 7 routers included of 335.70.
 
