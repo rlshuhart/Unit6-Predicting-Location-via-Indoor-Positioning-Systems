@@ -2,7 +2,7 @@
 title: "Predicting Location via Indoor Positioning Systems"
 subtitle: MSDS 7333-401
 author: "Brett Hallum, Chris Ficklin, and Ryan Shuhart"
-date: February 2016
+date: February 2017
 output: html_notebook
 #output: pdf_document #<- to be used for submission
 ---
@@ -375,6 +375,32 @@ plot_k_eval(wtk_20_no_ddcd, "Using 00:0f:a3:39:e1:c0 AP Signal")
 print(paste("The best MSE:",top_n(wtk_20_no_ddcd,-1,MSE)[2], "with a k of:",
             top_n(wtk_20_no_ddcd,-1,MSE)[1])) # Negative 1 is to get lowest MSE
 ```
+
+
+
+```{r, fig.height=5, fig.width=7}
+k_20_Diffs <- as.data.frame(k_20_list[2])
+
+p <- ggplot(building, aes(x=posX, y=posY)) + 
+        geom_point(aes(shape=Type, color=Type)) + 
+        geom_text(data=filter(AP, !(Label %in% c("sig_90", "sig_8d"))), aes(label=Label), nudge_y = -.6) +
+        geom_text(data=filter(AP, Label == "sig_90"), aes(label=Label), nudge_x = 2) +
+        geom_text(data=filter(AP, Label == "sig_8d"), aes(label=Label), nudge_x = -2) +
+        labs(title="Floor Plan") + 
+        scale_shape_manual(values = c(8,16,1)) +
+        scale_colour_manual(values=c("red","black","blue")) +
+        theme_bw() +
+        theme(axis.title.x=element_blank(), 
+              axis.title.y=element_blank(), 
+              axis.text.x=element_blank(), 
+              axis.text.y=element_blank(),
+              panel.grid.major=element_blank(),
+              panel.grid.minor=element_blank(),
+              axis.ticks=element_blank())
+
+p + geom_segment(data=k_20_Diffs, aes(x = posX, y=posY, xend = posXest, yend = posYest), color="red", size=1)
+
 ```
+
 
 
