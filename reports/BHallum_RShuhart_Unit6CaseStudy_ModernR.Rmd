@@ -229,6 +229,49 @@ predictXYKNN <- function(offline_signals, online_signals,
   return(estXYk)
 }
 
+pred_XY_Nbr_Ang <- function(offlineByAvgSig, onlineByAvgSig, k){
+  results <- data.frame(posXest=numeric(), posYest=numeric(), posX=numeric(),  posY=numeric())
+  
+  possibleAngles <- c(0,  45,  90, 135, 180, 225, 270, 315)
+  
+  # Goes through all possible online angles and runs KNN only on a filtered
+  # offline group containing only the neighboring angles. Each group is a set
+  # of online observations sharing the same angle. This group then uses KNN
+  # on the offline group with the same angle and the angles directly to the 
+  # left and right. After all the possible online angles are predicted, the
+  # results are scored.
+  for (ang in possibleAngles){ 
+    angleLeft <- (ang - 45 + 360)%%360
+    angleRight <-(ang + 45 + 360)%%360
+    
+    offline_signals <- select( 
+      filter(offlineByAvgSig, angle %in% c(angleLeft, ang, angleRight)), 
+      -posXY, -posX, -posY, -angle)
+    
+    offline_posX <- select(
+      filter(offlineByAvgSig, angle %in% c(angleLeft, ang, angleRight)), 
+      posX)
+    
+    offline_posY <- select(
+      filter(offlineByAvgSig, angle %in% c(angleLeft, ang, angleRight)), 
+      posY)
+    
+    online_signals <- select(
+      filter(onlineByAvgSig, angle == ang),
+      -posXY, -posX, -posY, -angle)
+    
+    online_positions_val <- select(
+      filter(onlineByAvgSig, angle == ang),
+      posX, posY)
+    
+    estXY <- predictXYKNN(offline_signals, online_signals, 
+                          offline_posX, offline_posY, k)
+    
+    # The results of each group have to be combined before scoring
+    results <- rbind(results, cbind(estXY, online_positions_val))
+  }
+  return(results)
+}
 
 # function to evaluate a series of k values and only looking at angle directly
 # to the left or the right
@@ -238,49 +281,9 @@ k_Eval <- function(offlineByAvgSig, onlineByAvgSig, k_max){
   
   for (k in 1:k_max){
     ks[k] <- k
-    resdf <- data.frame(posXest=numeric(), posYest=numeric(), posX=numeric(),  posY=numeric())
-    
-    possibleAngles <- c(0,  45,  90, 135, 180, 225, 270, 315)
-    
-    # Goes through all possible online angles and runs KNN only on a filtered
-    # offline group containing only the neighboring angles. Each group is a set
-    # of online observations sharing the same angle. This group then uses KNN
-    # on the offline group with the same angle and the angles directly to the 
-    # left and right. After all the possible online angles are predicted, the
-    # results are scored.
-    for (ang in possibleAngles){ 
-      angleLeft <- (ang - 45 + 360)%%360
-      angleRight <-(ang + 45 + 360)%%360
-  
-      offline_signals <- select( 
-        filter(offlineByAvgSig, angle %in% c(angleLeft, ang, angleRight)), 
-        -posXY, -posX, -posY, -angle)
-      
-      offline_posX <- select(
-        filter(offlineByAvgSig, angle %in% c(angleLeft, ang, angleRight)), 
-        posX)
-      
-      offline_posY <- select(
-        filter(offlineByAvgSig, angle %in% c(angleLeft, ang, angleRight)), 
-        posY)
-    
-      online_signals <- select(
-        filter(onlineByAvgSig, angle == ang),
-        -posXY, -posX, -posY, -angle)
-      
-      online_positions_val <- select(
-        filter(onlineByAvgSig, angle == ang),
-        posX, posY)
-      
-      estXY <- predictXYKNN(offline_signals, online_signals, 
-                             offline_posX, offline_posY, k)
-    
-      # The results of each group have to be combined before scoring
-      resdf <- rbind(resdf, cbind(estXY, online_positions_val))
-    }
-    
+    results <- pred_XY_Nbr_Ang(offlineByAvgSig, onlineByAvgSig, k)
     #MSE of all the completed online predictions
-    MSE[k] <- sum( rowSums( (resdf[,c("posXest","posYest")] - resdf[,c("posX","posY")])^2) )
+    MSE[k] <- sum( rowSums( (results[,c("posXest","posYest")] - results[,c("posX","posY")])^2) )
   }
   return(data.frame(k=ks, MSE=MSE))
 }
@@ -379,7 +382,7 @@ print(paste("The best MSE:",top_n(wtk_20_no_ddcd,-1,MSE)[2], "with a k of:",
 
 
 ```{r, fig.height=5, fig.width=7}
-k_20_Diffs <- as.data.frame(k_20_list[2])
+k_20_Diffs <- pred_XY_Nbr_Ang(offlineByAvgSig, onlineByAvgSig, 4)
 
 p <- ggplot(building, aes(x=posX, y=posY)) + 
         geom_point(aes(shape=Type, color=Type)) + 
