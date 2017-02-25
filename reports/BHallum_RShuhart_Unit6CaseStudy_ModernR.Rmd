@@ -1,12 +1,11 @@
 ---
 title: "Predicting Location via Indoor Positioning Systems"
 author: "Brett Hallum, Chris Ficklin, and Ryan Shuhart"
-date: February 2017
+date: "February 2017"
 output:
-  html_document: default
   html_notebook: default
+  html_document: default
 subtitle: MSDS 7333-401
-#output: pdf_document #<- to be used for submission
 ---
 ## Abstract
 blah blah blah...
@@ -26,6 +25,7 @@ I like to paint by color..
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(tibble)
 library(DataExplorer)
 library(class) #KNN Classifier
 library(FNN) #KNN Regression
@@ -293,41 +293,47 @@ k_Eval <- function(offlineByAvgSig, onlineByAvgSig, k_max){
   }
   return(data.frame(k=ks, MSE=MSE))
 }
+```
 
-plot_k_eval <- function(df, title=NULL){
-  ggplot(df, aes(k, MSE)) + 
-    geom_line() + 
-    theme_classic() + 
-    labs(title=title) +
-    geom_text(data=top_n(df,-1,MSE), aes(label=MSE), nudge_y = 20)
-}
+```{r, fig.align='center'}
+mse_allsigs <-  k_Eval(offlineByAvgSig, onlineByAvgSig, 20)
+mse_allsigs$Method <- "All Signals"
+
+mse_6sigscc <- k_Eval(select(offlineByAvgSig, -sig_c0), select(onlineByAvgSig, -sig_c0), 20)
+mse_6sigscc$Method <- "6 Signals - dd:cc"
+
+mse_6sigsco <-  k_Eval(select(offlineByAvgSig, -sig_cd), select(onlineByAvgSig, -sig_cd), 20) 
+mse_6sigsco$Method <- "6 Signals - e1:c0"
+
+mse_allsigswt <-  k_Eval(wtOfflineByAvgSig, wtOnlineByAvgSig, 20)
+mse_allsigswt$Method <- "All Weighted Signals"
+
+mse_6sigsccwt <- k_Eval(select(wtOfflineByAvgSig, -sig_c0), select(wtOnlineByAvgSig, -sig_c0), 20)
+mse_6sigsccwt$Method <- "6 Weighted Signals - dd:cc"
+
+mse_6sigscowt <-  k_Eval(select(wtOfflineByAvgSig, -sig_cd), select(wtOnlineByAvgSig, -sig_cd), 20) 
+mse_6sigscowt$Method <- "6 Weighted Signals - e1:c0"
+
+mse_all <- rbind(mse_allsigs, mse_6sigscc, mse_6sigsco, 
+                 mse_allsigswt, mse_6sigsccwt, mse_6sigscowt)
+
+ggplot(mse_all, aes(k, MSE)) + 
+  geom_line(aes(color=Method), size=1.4) + 
+  theme_classic() + 
+  scale_colour_manual(values=c("#0C38E8","#0CE85A", "#E8AD0C", 
+                               "#E8110C", "#00E6FF","#FF6800")) +
+  labs(title="(Fig. 4) - Three Signal Methods - Unweighted and Weighted") 
 
 ```
 
-
-### Plot MSE for k 1-20 using All AP signals
 ```{r}
-k_20 <- k_Eval(offlineByAvgSig, onlineByAvgSig, 20)
-plot_k_eval(k_20, "(Fig. 5) Using all 7 AP Signals")
-print(paste("The best MSE:",top_n(k_20,-1,MSE)[2], "with a k of:", top_n(k_20,-1,MSE)[1])) # Negative 1 is to get lowest MSE
+library(xtable)
+# Table - Best Results by Method
+t <- mse_all %>% group_by(Method) %>% top_n(-1,MSE) %>% arrange(MSE) %>% select(Method, k, MSE)
+
+xtable(t, caption="Table 1 - Best MSE and k by Method")
 ```
 
-### Without e1:c0
-```{r}
-k_20_no_e1c0 <- k_Eval(select(offlineByAvgSig, -sig_c0), 
-                       select(onlineByAvgSig, -sig_c0), 20)
-plot_k_eval(k_20_no_e1c0, "(Fig. 6) Using 00:0f:a3:39:dd:cd AP Signal")
-print(paste("The best MSE:",top_n(k_20_no_e1c0,-1,MSE)[2], "with a k of:",
-            top_n(k_20_no_e1c0,-1,MSE)[1])) # Negative 1 is to get lowest MSE
-```
-### Without dd:cd
-```{r}
-k_20_no_ddcd <- k_Eval(select(offlineByAvgSig, -sig_cd), 
-                       select(onlineByAvgSig, -sig_cd), 20)
-plot_k_eval(k_20_no_ddcd, "(Fig. 7) Using 00:0f:a3:39:e1:c0 AP Signal")
-print(paste("The best MSE:",top_n(k_20_no_ddcd,-1,MSE)[2], "with a k of:",
-            top_n(k_20_no_ddcd,-1,MSE)[1])) # Negative 1 is to get lowest MSE
-```
 From the graphs above, we are able to determine the best value of K to use when predicting the location of the signal reading device. We find the best K to use for utilizing all 7 routers is 4, which leads to an MSE of 201.34. When the router 00:0f:a3:39:e1:c0 is removed from the list, we use a K of 8 to obtain the best MSE of 207.23. Finally, removing the router 00:0f:a3:39:dd:cd, as is done by the original research team, results in a K of 5 with an MSE of 264.20.
 
 From these results, we determine that the best method of determining location is to leave both of the routers included in the data set as it produces the smallest error, and thus, better accuracy. However, we know that there are only supposed to by 6 routers and these 2 that we are testing for elimination, are tagged at being in the same spot. Knowing that, it would be ideal to remove 00:0f:a3:39:e1:c0 instead of 00:0f:a3:39:dd:cd to achieve a smaller error when predicting the location of the device.
