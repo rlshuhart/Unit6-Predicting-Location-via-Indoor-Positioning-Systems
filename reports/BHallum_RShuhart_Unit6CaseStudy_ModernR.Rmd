@@ -430,7 +430,7 @@ kable(mse_all %>%
 
 
 
-```{r}
+```{r, echo=FALSE}
 
 best_all_sig <- pred_XY_Nbr_Ang(offlineByAvgSig, onlineByAvgSig, 4)
 best_cc <-  pred_XY_Nbr_Ang(select(offlineByAvgSig, -sig_c0), select(onlineByAvgSig, -sig_c0), 8)
@@ -440,19 +440,19 @@ best_c0 <-  pred_XY_Nbr_Ang(select(offlineByAvgSig, -sig_cd), select(onlineByAvg
 best_all_sig_dists <- best_all_sig %>% 
   transmute(Dist = sqrt((posX - posXest)^2 + (posY - posYest)^2)) %>% 
   arrange(desc(Dist))
-best_all_sig_dists$Method <- "Best All Signals"
+best_all_sig_dists$Method <- "Best All Signals - k=4"
 best_all_sig_dists$Index <- seq.int(nrow(best_all_sig_dists))
 
 best_cc_dists <- best_cc %>% 
   transmute(Dist = sqrt((posX - posXest)^2 + (posY - posYest)^2)) %>% 
   arrange(desc(Dist))
-best_cc_dists$Method <- "Best 6 Signals dd:cc"
+best_cc_dists$Method <- "Best 6 Signals dd:cc - k=8"
 best_cc_dists$Index <- seq.int(nrow(best_cc_dists))
 
 best_c0_dists <- best_c0 %>% 
   transmute(Dist = sqrt((posX - posXest)^2 + (posY - posYest)^2)) %>% 
   arrange(desc(Dist))
-best_c0_dists$Method <- "Best 6 Signals e1:c0"
+best_c0_dists$Method <- "Best 6 Signals e1:c0 - k=6"
 best_c0_dists$Index <- seq.int(nrow(best_c0_dists))
 
 best_no_wt <- rbind(best_all_sig_dists, 
@@ -460,12 +460,13 @@ best_no_wt <- rbind(best_all_sig_dists,
                     best_c0_dists)
 
 ggplot(best_no_wt, aes(y = Dist, x=Index, color=Method)) + 
-  geom_area(stat="identity", size=.1, position = position_dodge(width = 0.0), alpha=.75, aes(fill=Method))+ 
+  geom_area(stat="identity", size=.1, position = position_dodge(width = 0.0), alpha=.15, aes(fill=Method))+ 
   scale_colour_manual(values=c("#0C38E8","#0CE85A", "#00E6FF")) +
   scale_fill_manual(values=c("#0C38E8","#0CE85A", "#00E6FF")) +
-  labs(title="(Fig. #) Area Plot of Sorted Errors ")
+  labs(title="(Fig. 7) Area Plot of Sorted Errors ") +
+  theme_classic() 
 ```
-The above shows 
+The above shows the sorted distant errors from the true location to the predicted location of the 3 methods without weighting using the best k as previously discussed. The higher the line the larger the error for the series of points. The plot gives evidence signal dd:cc is superior to e1:c0 as the "Best 6 Signals dd:cc" is consistently below "Best 6 Signals e1:c0."  Compared to the "Best 6 Signals dd:cc", using all signals outperforms for a certain group towards the left side of the table, between Index 3 to 18, however, "Best 6 Signals dd:cc" outperforms between Index 20 to 35, but not as much to have a better MSE.
 
 
 ```{r, echo=FALSE}
