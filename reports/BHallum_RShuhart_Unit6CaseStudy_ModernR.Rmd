@@ -191,7 +191,7 @@ percDuplicated <- nrow(online_allmacs[duplicated(online_allmacs[,c("time", "posX
 paste(sprintf("%.1f", percDuplicated*100), "% of the online observations are duplicated.", sep="")
 ```
 
-The online data used for knn is grouped by access point, position, and angle and will average each of the signal observations. This averaging is done, as noted above, to account for multiple positions, angle and MAC addresses having multple signal readings.
+The online data used for KNN is grouped by access point, position, and angle and will average each of the signal observations. This averaging is done, as noted above, to account for multiple positions, angle and MAC addresses having multple signal readings.
 ```{r, echo=FALSE}
 onlineByAvgSig <- group_by(online_allmacs, posXY, posX, posY, mac,  angle) %>%
   summarize(avgSig = mean(signal)) %>%
@@ -250,11 +250,12 @@ ggplot(signals_only, aes(k, MSE)) +
 
 ```
 ```{r, echo=FALSE}
-kable(signals_only[,c("k", "MSE")]%>% 
-        top_n(-1,MSE), caption="Benchmark - All Signals Without Consideration to Angle")
+kable(signals_only[,c("k", "MSE")] %>% 
+        top_n(-1,MSE), 
+      caption="Benchmark - All Signals Without Consideration to Angle") 
 ```
 
-The above results from our K Nearest Neighbors approximation of location show, without accounting for the angle of the signal and limiting the possible location based on angle that the signal was received at, we get the best KNN result when using K=5. This leads to an mean square error of 252.47, which is significantly better than the K=1 MSE of 529.04 and marginally better than the MSE for K=3 of 267.63.
+The above results from our K Nearest Neighbors approximation of location show, without accounting for the angle of the signal and limiting the possible location based on angle that the signal was received at, we get the best KNN result when using K=10 with a mean square error of 240.25. This will be the benchmark to beat with other methodologies explored below.
 
 We want to improve these results by limiting the angle observed and using the best possible K within the KNN prediction. The following graphs assit us in achieving both of these goals.
 
@@ -325,10 +326,10 @@ mse_allsigs <-  k_Eval(offlineByAvgSig, onlineByAvgSig, 20)
 mse_allsigs$Method <- "All Signals"
 
 mse_6sigscc <- k_Eval(select(offlineByAvgSig, -sig_c0), select(onlineByAvgSig, -sig_c0), 20)
-mse_6sigscc$Method <- "6 Signals - dd:cd"
+mse_6sigscc$Method <- "6 Signals - sig_cd"
 
 mse_6sigsco <-  k_Eval(select(offlineByAvgSig, -sig_cd), select(onlineByAvgSig, -sig_cd), 20) 
-mse_6sigsco$Method <- "6 Signals - e1:c0"
+mse_6sigsco$Method <- "6 Signals - sig_c0"
 
 mse_all_no_wt <- rbind(mse_allsigs, mse_6sigscc, mse_6sigsco, signals_only)
 
@@ -376,7 +377,7 @@ In an attempt to improve the accuracy of predicting location, we up-weight stron
 
 $$\frac{1/d}{\sum_{i=1}^k 1/d_i}$$
 
-From the results in Figure 5 below, it seems that by weighting the signal strength, our estimate of distance, we do not improve the accuracy of the nearest neighbor calculation. Without weighting the best MSE was 201.34 while we see an MSE of 335.45 with the weighting. Removing 00:0f:a3:39:e1:c0 instead of 00:0f:a3:39:dd:cd still provides the best accuracy result. For the case of weighting, it is not advised to leave both signals in, as the use of 6 signals with 00:0f:a3:39:dd:cd included produces the best MSE of 335.45 compared to the MSE of all 7 routers included of 335.70.
+From the results in Figure 5 below, it seems that by weighting the signal strength, our estimate of distance, we do not improve the accuracy of the nearest neighbor calculation. Without weighting the best MSE was 201.34 while we see an MSE of 335.45 with the weighting. Removing 00:0f:a3:39:e1:c0 instead of 00:0f:a3:39:dd:cd still provides the best accuracy result. For the case of weighting, it is not advised to leave both signals in, as the use of 6 signals with 00:0f:a3:39:dd:cd included produces the best MSE of 335.45 compared to the MSE of all 7 routers included of 335.70. None of the weighted methods exceeds the benchmark.
 ```{r, echo=FALSE}
 
 mse_allsigswt <-  k_Eval(wtOfflineByAvgSig, wtOnlineByAvgSig, 20)
@@ -397,7 +398,7 @@ ggplot(mse_all_wt, aes(k, MSE)) +
   labs(title="(Fig. 5) - Three Signal Methods - Weighted") 
 
 ```
-Table - Best Results by Method
+Table - Best Results by Weighted Methods
 ```{r, echo=FALSE}
 # Table - Best Results by Method
 kable(mse_all_wt %>% 
@@ -408,7 +409,7 @@ kable(mse_all_wt %>%
       caption = "Best Results - Weighted")
 ```
 
-
+Figure 6 summarizes the discussed methodolgies. Only the two methods using 6 signals with sig_cd or all unweighted signals managed to exceed the benchmark.
 ```{r, echo=FALSE}
 mse_all <- rbind(mse_allsigs, mse_6sigscc, mse_6sigsco, 
                  mse_allsigswt, mse_6sigsccwt, mse_6sigscowt, signals_only)
@@ -421,7 +422,8 @@ ggplot(mse_all, aes(k, MSE)) +
   labs(title="(Fig. 6) - Three Signal Methods - Unweighted and Weighted") 
 
 ```
-Table - Best Results by Method
+
+Table - Best Results by All Methods
 ```{r, echo=FALSE}
 # Table - Best Results by Method
 kable(mse_all %>% 
@@ -470,31 +472,36 @@ ggplot(best_no_wt, aes(y = Dist, x=Index, color=Method)) +
   labs(title="(Fig. 7) Area Plot of Sorted Errors ") +
   theme_classic() 
 ```
-The above shows the sorted distant errors from the true location to the predicted location of the 3 methods without weighting using the best k as previously discussed. The higher the line the larger the error for the series of points. The plot gives evidence signal dd:cd is superior to e1:c0 as the "Best 6 Signals dd:cd" is consistently below "Best 6 Signals e1:c0."  Compared to the "Best 6 Signals dd:cd", using all signals outperforms for a certain group towards the left side of the table, between Index 3 to 18, however, "Best 6 Signals dd:cd" outperforms between Index 20 to 35, but not as much to have a better MSE.
+The above figure 7 shows the sorted distant errors from the true location to the predicted location of the 3 methods without weighting using the best k as previously discussed. The higher the line the larger the error for the series of points. The plot gives evidence signal dd:cd is superior to e1:c0 as the "Best 6 Signals dd:cd" is consistently below "Best 6 Signals e1:c0."  Compared to the "Best 6 Signals dd:cd", using all signals outperforms for a certain group towards the left side of the table, between Index 3 to 18, however, "Best 6 Signals dd:cd" outperforms between Index 20 to 35, but not as much to have a better MSE.
 
-
+Figure 8 plots the predicted points error from the actual locations, and figure 9 shows that approximately 75% of the predicted locations for the Best All Signals method were within 2 meters.
 ```{r, echo=FALSE}
-p <- ggplot(building, aes(x=posX, y=posY)) + 
-        geom_point(aes(shape=Type, color=Type)) + 
-        geom_text(data=filter(AP, !(Label %in% c("sig_90", "sig_8d"))), aes(label=Label), nudge_y = -.6) +
-        geom_text(data=filter(AP, Label == "sig_90"), aes(label=Label), nudge_x = 2) +
-        geom_text(data=filter(AP, Label == "sig_8d"), aes(label=Label), nudge_x = -2) +
-        labs(title="(Fig. 8) Floor Plan - Error Bars for Best KNN Using All Signals - No Weighting") + 
-        scale_shape_manual(values = c(8,16,16)) +
-        scale_colour_manual(values=c("red","black","#0DC3FF")) +
-        theme_bw() +
-        theme(axis.title.x=element_blank(), 
-              axis.title.y=element_blank(), 
-              axis.text.x=element_blank(), 
-              axis.text.y=element_blank(),
-              panel.grid.major=element_blank(),
-              panel.grid.minor=element_blank(),
-              axis.ticks=element_blank()) + 
+ggplot(building, aes(x=posX, y=posY)) + 
+  geom_point(aes(shape=Type, color=Type)) + 
+  geom_text(data=filter(AP, !(Label %in% c("sig_90", "sig_8d"))), aes(label=Label), nudge_y = -.6) +
+  geom_text(data=filter(AP, Label == "sig_90"), aes(label=Label), nudge_x = 2) +
+  geom_text(data=filter(AP, Label == "sig_8d"), aes(label=Label), nudge_x = -2) +
+  labs(title="(Fig. 8) Floor Plan - Error Bars for Best KNN Using All Signals - No Weighting") + 
+  scale_shape_manual(values = c(8,16,16)) +
+  scale_colour_manual(values=c("red","black","#0DC3FF")) +
+  theme_bw() +
+  theme(axis.title.x=element_blank(), 
+        axis.title.y=element_blank(), 
+        axis.text.x=element_blank(), 
+        axis.text.y=element_blank(),
+        panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(),
+        axis.ticks=element_blank()) + 
   geom_segment(data=best_all_sig, aes(x = posX, y=posY, xend = posXest, yend = posYest), color="red", size=1)
-
-p 
-
 ```
+```{r, echo=FALSE, fig.height=1.5, fig.width=5}
+ggplot(best_all_sig_dists, aes(x=Method, y=Dist)) +
+  geom_boxplot() +
+  theme_classic() + 
+  coord_flip() +
+  labs(title="(Fig. 9) Distribution of Distance\nErrors of Best All Signals")
+```
+
 ### Improvements and Future Work
 
   The models we used to look at the signals consisted of the signals for all of the possible angles and  the angle we were observing and the angles 45 degrees away on either side. It is possible that there are other angle combinations besides this one that would produce better results. We observed all the angles included which produced worse results, an MSE of 252.47 in the best case, than using just 3 of the angles available, which produced an MSE of 201.34 at its best. There is the possibility of additional angles, or other combination of angles, that would produce a better prediction of locations.
