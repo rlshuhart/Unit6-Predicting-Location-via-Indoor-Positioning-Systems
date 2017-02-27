@@ -8,18 +8,15 @@ output:
   pdf_document: default
 subtitle: MSDS 7333-401
 ---
-# Questions to answer[remove later]
-1. Which of these two MAC addresses should be used and which should not be used for RTLS? 
-2. Which MAC address yields the best prediction of location?
-3. Does using data for both MAC addresses simultaneously yield more, or less, accurate prediction of location?
-4. For what range of values of weights are you able to obtain better prediction values than for the unweighted k-nearest neighbor approach? 
-
-
-## Abstract
-blah blah blah...
 
 ## Introduction
-blah blah blah...
+
+The low cost and near ubiquity of wireless networking infrastructure in buildings has brought with it a long desired side benefit, the ability to track people and equipment moving through a space in near real-time. The goal of knowing who and what are in a location and the ability to track their movements has many applications for which solutions have long been sought. In grocery stores, for instance, significant resources were commonly used to study the paths shoppers took from the time they arrived until they left. Data could be used to plan the layout of goods, to sell shelf space at a premium, and to assist in dedicating loss prevention resources. These efforts were costly and nowhere near real-time, and did not easily account for future layout changes.
+
+Now with Wi-Fi equipment such as access points in place or easily deployed, it is possible to track the location of devices that continuously communicate with the fixed wireless infrastructure. Equipment such as laptops can be tracked for security purposes within an office, for instance, to ensure that they stay on site or to record when and where they departed. Such information can flag alerts or be cross-referenced with other access controls such as key cards and video surveillance to ensure the security of physical and intellectual property.
+
+People who carry phones or other equipment meant to communicate with the Wi-Fi access points can be similarly tracked. Of important note is the fact that a device need not fully connect to a wireless network. It is sufficient that the radio merely be turned on since it regularly identifies itself to seek out potential access points with which it may connect. 
+In this case study we use the R language to process raw data collected from an existing wireless infrastructure and develop an analytical engine to create an indoor positioning system (IPS) to achieve this location awareness.
 
 ## Description of Data
 blah blah
@@ -109,6 +106,7 @@ ggplot(building, aes(x=posX, y=posY)) +
         axis.ticks=element_blank())
 ```
 Figure 1 plots the current floor plan of the warehouse and the locations of the training points, seen in black, and the test points, seen in blue. The training points, or Offline data, are 1 meter apart.
+
 ### Offline Missing Data
 ```{r, echo=FALSE}
 # Modified from DataExplorer library by boxuancui 
@@ -475,7 +473,7 @@ p <- ggplot(building, aes(x=posX, y=posY)) +
         geom_text(data=filter(AP, !(Label %in% c("sig_90", "sig_8d"))), aes(label=Label), nudge_y = -.6) +
         geom_text(data=filter(AP, Label == "sig_90"), aes(label=Label), nudge_x = 2) +
         geom_text(data=filter(AP, Label == "sig_8d"), aes(label=Label), nudge_x = -2) +
-        labs(title="Floor Plan - Error Bars for Best KNN Using All Signals - No Weighting") + 
+        labs(title="(Fig. 8) Floor Plan - Error Bars for Best KNN Using All Signals - No Weighting") + 
         scale_shape_manual(values = c(8,16,16)) +
         scale_colour_manual(values=c("red","black","#0DC3FF")) +
         theme_bw() +
@@ -491,3 +489,10 @@ p <- ggplot(building, aes(x=posX, y=posY)) +
 p 
 
 ```
+### Improvements and Future Work
+
+  The models we used to look at the signals consisted of the signals for all of the possible angles and  the angle we were observing and the angles 45 degrees away on either side. It is possible that there are other angle combinations besides this one that would produce better results. We observed all the angles included which produced worse results, an MSE of 252.47 in the best case, than using just 3 of the angles available, which produced an MSE of 201.34 at its best. There is the possibility of additional angles, or other combination of angles, that would produce a better prediction of locations.
+
+  It would also be interesting to observe how location in the warehouse affects the overall signal from specific routers. From the histograms in Figure 3, there seems to be correlation between the number of walls between a router and the signal strength. If we observe the frequency of signals originating from the router ending in 90, there seems to be a dip between signals -60 and -65. This could be subject to some additional walls that interfere with the signal and don't allow an accurate representation of what the signal strength should be at a given location. The adverse of this can be demonstrated by the router ending in 81. This router has a normal distribution of signals which could indicate that the signals reach each point with the signal that it should be reached without the interference of additional walls.
+
+  The weighting function that was used to weight the signals could change to improve the results. The current method used assumes that the signal strength is directly related to the distance and is used in place of the distance to get a weight for the signal. It is possible that there is a better relationship between signal strength and distance that would better relate the two and give more accurate predictions of location. Each of these changes, either separate or in conjunction with one another, could be used in future analysis to obtain more accurate and better results. 
