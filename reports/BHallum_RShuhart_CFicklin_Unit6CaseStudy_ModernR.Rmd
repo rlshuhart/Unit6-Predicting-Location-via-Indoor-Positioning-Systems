@@ -575,3 +575,11 @@ The models we used to look at the signals consisted of the signals for all of th
 It would also be interesting to observe how location on the floor affects the overall signal from specific access points. From the histograms in Figure 3, there seems to be correlation between the number of walls between an access point and the signal strength. If we observe the frequency of signals originating from the address ending in 90, there seems to be a dip between signals -60 and -65. This could be subject to some additional walls that interfere with the signal and don't allow an accurate representation of what the signal strength should be at a given location. The inverse of this can be demonstrated by the access point whose address ends in 81, which has a normal distribution of signals which seems to suggest that its signal reaches each point without the interference of additional walls.
 
 Taking this into consideration, the weighting function previously used to weight the signals could potentially be changed to improve the results. The current method assumes that the signal strength is directly related to distance, and therefore is used in place of distance to weight the signal. It is possible that there is a different relationship between signal strength and distance that would better relate the two and give more accurate predictions of location. Each of these changes, either separate or in conjunction with one another, could be used in future analysis to potentially improve upon our results.
+
+### Bibliography
+
+Nolan, Deborah, and Duncan Lang. <i>Data Science in R: A Case Studies Approach to Computational Reasoning and Problem Solving</i>. CRC Press, 2015. Chapter 1.
+
+Nolan, Deborah, and Duncan Lang. <i>Case Studies in Data Science with R</i>. Duncan Lang, 2015. http://www.rdatasciencecases.org/.
+
+Wickham, Hadley. <i>ggplot2</i>. RStudio. http://docs.ggplot2.org/current/index.html. 
